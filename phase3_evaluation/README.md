@@ -35,18 +35,6 @@ straight off the serialized text, global properties must be computed from it.
 
 ## How to run
 
-```bash
-cd phase3_evaluation
-pip install -r requirements.txt
-python run_phase3_full.py
-```
-
-Explicit paths if you are running from elsewhere:
-
-```bash
-python run_phase3_full.py --phase2-dir ../phase2_model_results --out-dir results
-```
-
 The notebook `Geometry_Experiment1_Phase3.ipynb` contains the same code split
 into cells. In Colab, if `../phase2_model_results/` is not present it falls back
 to a manual file-upload prompt for the six result logs.
