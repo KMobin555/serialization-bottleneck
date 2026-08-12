@@ -1,12 +1,15 @@
-# Experiment 1 — Domain 1 (Geometry)
+# Experiment 1 — Property Recovery from Text-Serialized Structured Objects
 
-Does serialization format cost a model accuracy? This repository holds the
-Geometry domain of Experiment 1: a 300-polygon benchmark, six model runs over
-it, and the evaluation of those runs.
+Does serialization format cost a model accuracy? This repository holds
+Experiment 1 across two domains so far: Geometry (polygons) and Graphs. Each
+domain is a 300-object benchmark, six model runs over it, and the evaluation
+of those runs.
 
 Reference spec: `serialization_experiment_1.pdf`.
 
 ## Pipeline
+
+### Domain 1 — Geometry
 
 | Phase | Folder | What it does | Docs |
 |-------|--------|--------------|------|
@@ -14,8 +17,17 @@ Reference spec: `serialization_experiment_1.pdf`.
 | 2 | `phase2_model_results/` | Queries 6 models — 9 properties per polygon — and scores the answers | [README](phase2_model_results/README.md) |
 | 3 | `phase3_evaluation/` | Aggregates the Phase-2 records into metrics and figures | [README](phase3_evaluation/README.md) |
 
-Each phase consumes the previous one's output files, so they run in order. Phase
-1 is fully offline; only Phase 2 calls APIs.
+### Domain 2 — Graphs
+
+| Phase | Folder | What it does | Docs |
+|-------|--------|--------------|------|
+| 1 | `phase1_dataset_graph/` | Generates the 300-graph dataset with 8 ground-truth properties | [README](phase1_dataset_graph/README.md) |
+| 2 | `phase2_model_results_graph/` | Queries 6 models — 8 properties per graph — and scores the answers | [README](phase2_model_results_graph/README.md) |
+| 3 | `phase3_evaluation_graph/` | Aggregates the Phase-2 records into metrics and figures | [README](phase3_evaluation_graph/README.md) |
+
+Each phase consumes the previous one's output files within its domain, so
+they run in order. Phase 1 is fully offline in both domains; only Phase 2
+calls APIs.
 
 ---
 
@@ -39,8 +51,9 @@ pip install -r requirements.txt
 | Package | Used by |
 |---------|---------|
 | `jupyter>=1.0` | Phase 1, Phase 3 — running the notebooks |
-| `shapely>=2.0` | Phase 1 — geometry construction and ground truth |
-| `matplotlib>=3.7` | Phase 1 — the spot-check figure; Phase 3 — the figures |
+| `shapely>=2.0` | Phase 1 (Geometry) — polygon construction and ground truth |
+| `networkx>=3.2` | Phase 1 (Graphs) — graph construction and ground truth |
+| `matplotlib>=3.7` | Phase 1 — the spot-check figures; Phase 3 — the figures |
 | `openai>=1.30` | Phase 2 — the API client (all providers) |
 | `python-dotenv>=1.0` | Phase 2 — loads `.env` |
 | `tenacity>=8.2` | Phase 2 — retry with exponential backoff |
@@ -80,6 +93,8 @@ Two commands, both free and neither needing an API key:
 ```bash
 # Phase 1 — open the notebook and run the cells in order
 jupyter notebook phase1_dataset/Geometry_Experiment1_Phase1.ipynb
+# Domain 2 (Graphs) Phase 1 works the same way:
+jupyter notebook phase1_dataset_graph/Graph_Experiment1_Phase1.ipynb
 
 # Phase 2 — build prompts without calling anything
 cd phase2_model_results/01_v4flash
@@ -109,8 +124,11 @@ per-folder file is only needed if Phase 3 is run in isolation.
 
 ## Where to go next
 
-- Regenerating or porting the dataset → [`phase1_dataset/README.md`](phase1_dataset/README.md)
-- Running the models, or porting the query harness → [`phase2_model_results/README.md`](phase2_model_results/README.md)
+- Regenerating or porting the Geometry dataset → [`phase1_dataset/README.md`](phase1_dataset/README.md)
+- Running the Geometry models, or porting the query harness → [`phase2_model_results/README.md`](phase2_model_results/README.md)
+- Regenerating or porting the Graph dataset → [`phase1_dataset_graph/README.md`](phase1_dataset_graph/README.md)
+- Running the Graph models, or porting the query harness → [`phase2_model_results_graph/README.md`](phase2_model_results_graph/README.md)
+- Graph evaluation notebook (not yet run against real API data) → [`phase3_evaluation_graph/README.md`](phase3_evaluation_graph/README.md)
 
-Both documents end with a porting section describing what is domain-agnostic and
-what a new domain has to replace.
+Each dataset README ends with a porting section describing what is
+domain-agnostic and what a new domain has to replace.

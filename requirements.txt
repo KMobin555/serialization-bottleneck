@@ -1,7 +1,8 @@
-# Phase 1 — dataset generation (Geometry_Experiment1_Phase1.ipynb)
+# Phase 1 — dataset generation (Geometry_Experiment1_Phase1.ipynb, Graph_Experiment1_Phase1.ipynb)
 jupyter>=1.0
 shapely>=2.0
 matplotlib>=3.7
+networkx>=3.2
 
 # Phase 2 — model runs (run_*_full.py)
 openai>=1.30
