@@ -1,0 +1,187 @@
+{
+  "total": 300,
+  "counts_by_tier_family": {
+    "simple": {
+      "erdos_renyi": 20,
+      "barabasi_albert": 19,
+      "watts_strogatz": 19,
+      "random_bipartite": 22,
+      "random_planar": 20
+    },
+    "medium": {
+      "erdos_renyi": 20,
+      "barabasi_albert": 19,
+      "watts_strogatz": 19,
+      "random_bipartite": 22,
+      "random_planar": 20
+    },
+    "hard": {
+      "erdos_renyi": 20,
+      "barabasi_albert": 19,
+      "watts_strogatz": 19,
+      "random_bipartite": 22,
+      "random_planar": 20
+    }
+  },
+  "bipartite_overall": 71,
+  "planar_overall": 93,
+  "distribution_by_tier": {
+    "simple": {
+      "num_nodes": {
+        "min": 6,
+        "max": 15,
+        "mean": 12.14,
+        "median": 13.0,
+        "std": 2.51
+      },
+      "num_edges": {
+        "min": 5,
+        "max": 45,
+        "mean": 22.71,
+        "median": 22.0,
+        "std": 9.68
+      },
+      "triangle_count": {
+        "min": 0,
+        "max": 38,
+        "mean": 9.26,
+        "median": 7.5,
+        "std": 9.63
+      },
+      "diameter": {
+        "min": 2,
+        "max": 8,
+        "mean": 3.71,
+        "median": 3.0,
+        "std": 1.1
+      },
+      "chromatic_number": {
+        "min": 2,
+        "max": 5,
+        "mean": 3.18,
+        "median": 3.0,
+        "std": 0.84
+      },
+      "avg_clustering": {
+        "min": 0.0,
+        "max": 0.72,
+        "mean": 0.3,
+        "median": 0.37,
+        "std": 0.21
+      },
+      "edge_list_length": {
+        "min": 37,
+        "max": 229,
+        "mean": 119.75,
+        "median": 118.0,
+        "std": 47.07
+      }
+    },
+    "medium": {
+      "num_nodes": {
+        "min": 16,
+        "max": 40,
+        "mean": 28.18,
+        "median": 28.0,
+        "std": 6.83
+      },
+      "num_edges": {
+        "min": 16,
+        "max": 132,
+        "mean": 69.22,
+        "median": 68.0,
+        "std": 25.78
+      },
+      "triangle_count": {
+        "min": 0,
+        "max": 111,
+        "mean": 22.32,
+        "median": 17.0,
+        "std": 22.45
+      },
+      "diameter": {
+        "min": 3,
+        "max": 18,
+        "mean": 4.67,
+        "median": 4.0,
+        "std": 2.08
+      },
+      "chromatic_number": {
+        "min": 2,
+        "max": 5,
+        "mean": 3.42,
+        "median": 4.0,
+        "std": 0.95
+      },
+      "avg_clustering": {
+        "min": 0.0,
+        "max": 0.49,
+        "mean": 0.22,
+        "median": 0.23,
+        "std": 0.16
+      },
+      "edge_list_length": {
+        "min": 98,
+        "max": 755,
+        "mean": 385.44,
+        "median": 378.0,
+        "std": 146.74
+      }
+    },
+    "hard": {
+      "num_nodes": {
+        "min": 41,
+        "max": 79,
+        "mean": 61.26,
+        "median": 61.0,
+        "std": 11.31
+      },
+      "num_edges": {
+        "min": 59,
+        "max": 499,
+        "mean": 176.96,
+        "median": 154.0,
+        "std": 82.7
+      },
+      "triangle_count": {
+        "min": 0,
+        "max": 177,
+        "mean": 39.29,
+        "median": 27.0,
+        "std": 41.36
+      },
+      "diameter": {
+        "min": 4,
+        "max": 20,
+        "mean": 5.91,
+        "median": 5.0,
+        "std": 2.45
+      },
+      "chromatic_number": {
+        "min": 2,
+        "max": 5,
+        "mean": 3.39,
+        "median": 4.0,
+        "std": 0.9
+      },
+      "avg_clustering": {
+        "min": 0.0,
+        "max": 0.46,
+        "mean": 0.17,
+        "median": 0.15,
+        "std": 0.14
+      },
+      "edge_list_length": {
+        "min": 338,
+        "max": 2870,
+        "mean": 1025.22,
+        "median": 896.5,
+        "std": 477.05
+      }
+    }
+  },
+  "chromatic_number_uncertified_count": 1,
+  "chromatic_number_uncertified_ids": [
+    "graph_hard_watts_strogatz_008"
+  ]
+}
