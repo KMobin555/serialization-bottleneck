@@ -106,7 +106,13 @@ candidate, run `check_validity`, retry up to `max_tries=3000`.
 - **`gen_watts_strogatz`** — `nx.watts_strogatz_graph(n, k, p)`,
   `k ∈ {4, 6}`, `p ∈ {0.1, 0.3, 0.5}`, skipped if `k >= n`.
 - **`gen_random_bipartite`** — `nx.bipartite.random_graph(n1, n2, p)` with
-  `n1/n2` split drawn from `[0.3, 0.7]` of `n`.
+  `n1 + n2 = n` and the ratio **between the two partitions**, `n1/n2`,
+  constrained to `[0.3, 0.7]` (PDF Table 7 — this is a ratio between
+  partition sizes, not either partition's share of `n`). Found by exact
+  integer search over `n`'s valid splits rather than rounding a continuous
+  target, since rounding can overshoot the bound for small `n` — e.g. `n=7`
+  admits only the single split `(2, 5)` (ratio `0.4`); naive rounding can
+  land on `(3, 4)` (ratio `0.75`, outside the bound).
 - **`gen_random_planar`** — Delaunay triangulation of `n` random points
   (always planar — any subgraph of a planar graph is planar too), then edges
   are randomly thinned toward a target within the `3n-6` planar bound,
@@ -138,8 +144,11 @@ the PDF's specified fallback chain:
 
 Verified against 7 known graphs (K5, Petersen, C5, C6, K3,3, K4, Star_10)
 before trusting it on the dataset — execution checklist item 2. On the
-committed run: **0 of 300 graphs are uncertified** (all closed via the clique
-certificate or backtracking within the time box).
+committed run: **1 of 300 graphs is uncertified**
+(`graph_hard_watts_strogatz_008`, closing the gap wasn't possible within the
+15s time box) — excluded from querying and evaluation per the PDF's
+instruction, everything else closed via the clique certificate or
+backtracking.
 
 ### Cell 9 — Section 3 (continued): ground truth and the record builder
 
@@ -265,35 +274,37 @@ Same `try/except` pattern as geometry — downloads on Colab, no-ops locally
 
 From `graph_exp1_summary.json`:
 
-- **bipartite_overall = 69 / 300 (23.0%)**, **planar_overall = 96 / 300
-  (32.0%)** — against the PDF's "aim for approximately 25–35%" for both.
+- **bipartite_overall = 71 / 300 (23.7%)**, **planar_overall = 93 / 300
+  (31.0%)** — against the PDF's "aim for approximately 25–35%" for both.
   Planar lands inside the target band; bipartite falls just short. This is
   structural, not a tuning miss: `random_bipartite` is the only family that
-  *guarantees* a bipartite instance, and it is already set to the top of the
-  PDF's allowed 18–22 per-tier range (22). The other four families are all
-  triangle-rich by construction — Erdős–Rényi at expected degree 3–6,
+  *guarantees* a bipartite instance (66/66), and it is already set to the top
+  of the PDF's allowed 18–22 per-tier range (22). The other four families are
+  all triangle-rich by construction — Erdős–Rényi at expected degree 3–6,
   Barabási–Albert's preferential attachment, Watts–Strogatz's ring-lattice
   rewiring, and Delaunay-derived planar graphs all produce odd cycles almost
-  every time — so they contribute only 3 incidental bipartite hits combined
-  across 240 graphs (1 ER, 2 random-planar; 0 from BA and WS). Closing the
+  every time — so they contribute only 5 incidental bipartite hits combined
+  across 234 graphs (all 5 from random-planar; 0 from ER, BA, WS). Closing the
   remaining gap without breaking per-family balance would require either
   loosening the PDF's family-balance tolerance or adding a sixth,
   tree-biased family — neither attempted here, since the PDF states the
-  target as "aim for," not a hard gate, and 69 positive / 231 negative
+  target as "aim for," not a hard gate, and 71 positive / 229 negative
   instances is already ample for the boolean-property precision/recall/
   confusion-matrix reporting in Section 6.
-- **chromatic_number_uncertified_count = 0** — every graph's chromatic
-  number closed via the clique certificate or the time-boxed backtracking
-  search; nothing needed exclusion on this run.
+- **chromatic_number_uncertified_count = 1**
+  (`graph_hard_watts_strogatz_008`) — every other graph's chromatic number
+  closed via the clique certificate or the time-boxed backtracking search;
+  this one graph didn't close within the 15s budget and is excluded from
+  querying/evaluation per the PDF's instruction, not approximated.
 - **Scale separation across tiers** is large and intentional:
 
   | Tier | mean nodes | mean edges | mean triangles | mean edge-list length |
   |------|-----------|-----------|-----------------|------------------------|
-  | simple | 12.09 | 22.38 | 9.22 | 118 chars |
-  | medium | 26.80 | 62.43 | 20.56 | 348 chars |
-  | hard   | 59.66 | 174.31 | 43.73 | 1,008 chars |
+  | simple | 12.14 | 22.71 | 9.26 | 120 chars |
+  | medium | 28.18 | 69.22 | 22.32 | 385 chars |
+  | hard   | 61.26 | 176.96 | 39.29 | 1,025 chars |
 
-  `chromatic_number` stays compact across tiers (mean 3.17 → 3.28 → 3.42,
+  `chromatic_number` stays compact across tiers (mean 3.18 → 3.42 → 3.39,
   max 5 throughout) since every family targets sparse-to-moderate density by
   design (Table 7's degree/`k`/`m` ranges) — this is expected, not a bug:
   chromatic number is bounded by max degree + 1 and these graphs are far

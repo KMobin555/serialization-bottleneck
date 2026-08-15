@@ -112,11 +112,17 @@ three domains. What's genuinely different:
 **Intentionally *not* carried over:** Geometry's `vertex_count`
 off-by-one-from-the-closing-coordinate adjustment (Fig 3's footnote
 mechanism, `offbyplus1_rate`/`adjusted_gap` in Geometry's Cell 13). That is a
-specific artifact of WKT's repeated closing coordinate — this domain's edge
-list has no equivalent structural quirk, so there is nothing analogous to
-adjust for. Table 14's general "off-by-one / definition" failure-mode
-category still exists in this domain's failure classifier (Cell 14), it's
-just not expected to fire the way it reliably does for geometry.
+specific artifact of WKT's repeated closing coordinate, with no equivalent in
+an edge list, so there's nothing analogous to adjust the *gap figure* for.
+
+**A different off-by-one *does* apply to this domain's failure taxonomy,
+though:** `diameter` has two common definitions — edges on the longest
+shortest path (this dataset's ground truth, `nx.diameter`) vs. nodes on that
+path (= edges + 1). Cell 14's `classify_failure()` labels a `diameter` miss
+of exactly `absolute_error == 1` as `off_by_one_definition` rather than
+`arithmetic_error`, the direct graph-domain instance of Table 14's general
+category (whose only PDF-given example is geometry's closing-coordinate
+case).
 
 ---
 

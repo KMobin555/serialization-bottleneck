@@ -311,6 +311,20 @@ list-valued property or cw/ccw-style categorical property in this domain —
 every property here is a single int, float, or bool, so `normalize_answer`
 has three branches instead of Geometry's five.
 
+**One domain-specific parser fix, found by testing against hand-crafted
+truncated/messy outputs (PDF execution checklist item 4).** The question
+text for `degree_of_node_0` names the node by number: *"What is the degree
+of node 0 in this graph?"* If steps 1–2 both fail to find valid JSON and the
+raw-string fallback (step 3) kicks in, a prose answer like *"the degree of
+node 0 is 4"* would otherwise have its first-number scan collide with the
+"0" in "node 0" — silently mis-scoring a correct answer of 4 as 0, with no
+parse-failure flag to catch it. `normalize_answer` strips a leading
+`node ?#?_?0` match before applying the numeric regex, only for this one
+property. Verified against a hand-crafted case set (clean JSON, JSON
+prefixed by chatter, no JSON, JSON truncated mid-value, JSON truncated
+mid-key, and the `degree_of_node_0` collision case specifically) before and
+after the fix.
+
 Failure to parse sets `parse_success: false`, `parsed_answer: null`, and
 `correct`/`correct_1pct` etc. to `false` — never dropped, per the same
 reasoning as Geometry: an unparseable answer is *incorrect*, not missing.
@@ -372,13 +386,22 @@ For a full 2,400-query run: `relative_error` on 300 records (one property ×
 300 graphs), `absolute_error`+`correct` (exact) on 1,500, `correct` (boolean)
 on 600 — before any chromatic-number exclusions.
 
-Definitions match the Geometry domain exactly: **relative error** =
-`|predicted − truth| / |truth|`, falling back to absolute error when truth
-is 0; **`correct_Npct`** = relative error ≤ N%, three thresholds stored so
-the accuracy bar is chosen at analysis time (PDF §6.2's strict/moderate/
-lenient tiers: 1% / 5% / 10%). There is no bbox/centroid-style normalized
-point error in this domain — nothing here is a multi-value coordinate, so no
-scale normalizer (Geometry's `bbox_diagonal`) is needed either.
+**Relative error** = `|predicted − truth| / |truth|`, falling back to
+absolute error whenever `|truth| < 0.01` — the PDF's Eq. 1 threshold
+(§6.2: *"If |v| < 0.01, use absolute error instead to avoid division by
+near-zero"*), not just when truth is exactly 0. This matters concretely for
+`avg_clustering`: it's bounded `[0, 1]` and plenty of sparse/tree-like graphs
+in this dataset land at or near 0, so a near-zero-but-nonzero truth (e.g.
+`0.005`) would otherwise blow up a small absolute miss into a huge relative
+error. (The Geometry domain's own `relative_scalar_error` only special-cases
+*exactly* 0 — harmless there since `area`/`perimeter` are bounded away from
+0 by the validity constraints, but not a pattern to copy blindly into a
+domain where the numeric property can genuinely sit near zero.)
+**`correct_Npct`** = relative error ≤ N%, three thresholds stored so the
+accuracy bar is chosen at analysis time (PDF §6.2's strict/moderate/lenient
+tiers: 1% / 5% / 10%). There is no bbox/centroid-style normalized point
+error in this domain — nothing here is a multi-value coordinate, so no scale
+normalizer (Geometry's `bbox_diagonal`) is needed either.
 
 ---
 

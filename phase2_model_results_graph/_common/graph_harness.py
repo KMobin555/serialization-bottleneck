@@ -97,6 +97,10 @@ QUESTIONS = {
 }
 
 NUMBER_RE = re.compile(r"[-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?")
+# degree_of_node_0's question text names the node by number ("node 0"), so a
+# prose fallback answer like "the degree of node 0 is 4" would otherwise have
+# its first-number scan collide with that "0" instead of the actual answer.
+NODE0_RE = re.compile(r"\bnode\s*#?\s*_?0\b", re.IGNORECASE)
 
 REQUIRED_DATASET_KEYS = {"object_id", "tier", "family", "num_nodes", "num_edges", "edge_list", "properties", "metadata"}
 
@@ -252,7 +256,8 @@ def normalize_answer(answer: Any, property_name: str) -> tuple[Any, bool]:
         if isinstance(answer, float) and answer.is_integer():
             return int(answer), True
         if isinstance(answer, str):
-            m = NUMBER_RE.search(answer)
+            text = NODE0_RE.sub("", answer) if property_name == "degree_of_node_0" else answer
+            m = NUMBER_RE.search(text)
             if m:
                 v = float(m.group())
                 if v.is_integer():
@@ -313,9 +318,13 @@ def parse_answer(raw: str, property_name: str) -> tuple[Any, bool]:
 # ---------------------------------------------------------------------------
 
 def relative_scalar_error(predicted: Any, truth: Any) -> tuple[float, float]:
+    # PDF S6.2, Eq. 1: use absolute error in place of relative error whenever
+    # |truth| < 0.01, not just when truth is exactly 0 -- avoids blowing up the
+    # relative error on avg_clustering values that are merely close to zero
+    # (e.g. sparse/tree-like graphs), not just exactly zero.
     abs_err = abs(float(predicted) - float(truth))
     denom = abs(float(truth))
-    rel = abs_err if denom == 0 else abs_err / denom
+    rel = abs_err if denom < 0.01 else abs_err / denom
     return abs_err, rel
 
 

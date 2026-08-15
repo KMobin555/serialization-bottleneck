@@ -9,8 +9,8 @@
     "property_locality": "global",
     "ground_truth": 0.2821,
     "prompt": "You are given an undirected graph as an edge list.\n\nGraph:\nGRAPH (n=13, m=19):\n0 8\n0 9\n1 2\n1 4\n1 9\n1 12\n2 3\n2 4\n2 10\n3 4\n3 5\n3 10\n4 8\n5 6\n5 9\n5 11\n6 9\n7 8\n11 12\n\nQuestion:\nWhat is the average clustering coefficient of this graph?\n\nRespond with only a JSON object in this format:\n{\"answer\": <your answer>}",
-    "raw_model_output": "{\"answer\": 0.433}",
-    "parsed_answer": 0.433,
+    "raw_model_output": "{\"answer\": 0.476}",
+    "parsed_answer": 0.476,
     "parse_success": true,
     "finish_reason": "stop",
     "failure_type": null,
@@ -19,9 +19,9 @@
     "temperature": 0.0,
     "prompt_tokens": 136,
     "completion_tokens": 8,
-    "timestamp": "2026-08-13T17:41:32.972151+00:00",
-    "absolute_error": 0.15089999999999998,
-    "relative_error": 0.5349166962070186,
+    "timestamp": "2026-08-15T06:21:21.855098+00:00",
+    "absolute_error": 0.19389999999999996,
+    "relative_error": 0.6873449131513646,
     "correct_1pct": false,
     "correct_5pct": false,
     "correct_10pct": false
@@ -36,7 +36,7 @@
     "property_locality": "global",
     "ground_truth": 3,
     "prompt": "You are given an undirected graph as an edge list.\n\nGraph:\nGRAPH (n=13, m=19):\n0 8\n0 9\n1 2\n1 4\n1 9\n1 12\n2 3\n2 4\n2 10\n3 4\n3 5\n3 10\n4 8\n5 6\n5 9\n5 11\n6 9\n7 8\n11 12\n\nQuestion:\nWhat is the chromatic number of this graph?\n\nRespond with only a JSON object in this format:\n{\"answer\": <your answer>}",
-    "raw_model_output": "{\"answer\": 4}",
+    "raw_model_output": "{\"answer\":4}",
     "parsed_answer": 4,
     "parse_success": true,
     "finish_reason": "stop",
@@ -45,8 +45,8 @@
     "provider": "openai",
     "temperature": 0.0,
     "prompt_tokens": 136,
-    "completion_tokens": 6,
-    "timestamp": "2026-08-13T17:41:33.010500+00:00",
+    "completion_tokens": 5,
+    "timestamp": "2026-08-15T06:21:21.435051+00:00",
     "absolute_error": 1,
     "correct": false
   },
@@ -70,7 +70,7 @@
     "temperature": 0.0,
     "prompt_tokens": 138,
     "completion_tokens": 6,
-    "timestamp": "2026-08-13T17:41:31.937355+00:00",
+    "timestamp": "2026-08-15T06:21:20.642840+00:00",
     "absolute_error": 0,
     "correct": true
   },
@@ -94,7 +94,7 @@
     "temperature": 0.0,
     "prompt_tokens": 134,
     "completion_tokens": 6,
-    "timestamp": "2026-08-13T17:41:32.953633+00:00",
+    "timestamp": "2026-08-15T06:21:21.444968+00:00",
     "absolute_error": 0,
     "correct": true
   },
@@ -108,7 +108,7 @@
     "property_locality": "local",
     "ground_truth": 19,
     "prompt": "You are given an undirected graph as an edge list.\n\nGraph:\nGRAPH (n=13, m=19):\n0 8\n0 9\n1 2\n1 4\n1 9\n1 12\n2 3\n2 4\n2 10\n3 4\n3 5\n3 10\n4 8\n5 6\n5 9\n5 11\n6 9\n7 8\n11 12\n\nQuestion:\nHow many edges does this graph have?\n\nRespond with only a JSON object in this format:\n{\"answer\": <your answer>}",
-    "raw_model_output": "{\"answer\":19}",
+    "raw_model_output": "{\"answer\": 19}",
     "parsed_answer": 19,
     "parse_success": true,
     "finish_reason": "stop",
@@ -117,8 +117,8 @@
     "provider": "openai",
     "temperature": 0.0,
     "prompt_tokens": 134,
-    "completion_tokens": 5,
-    "timestamp": "2026-08-13T17:41:31.945135+00:00",
+    "completion_tokens": 6,
+    "timestamp": "2026-08-15T06:21:20.907907+00:00",
     "absolute_error": 0,
     "correct": true
   },
@@ -142,7 +142,7 @@
     "temperature": 0.0,
     "prompt_tokens": 138,
     "completion_tokens": 5,
-    "timestamp": "2026-08-13T17:41:31.992823+00:00",
+    "timestamp": "2026-08-15T06:21:20.804031+00:00",
     "correct": true
   },
   {
@@ -165,7 +165,7 @@
     "temperature": 0.0,
     "prompt_tokens": 136,
     "completion_tokens": 5,
-    "timestamp": "2026-08-13T17:41:31.941029+00:00",
+    "timestamp": "2026-08-15T06:21:20.620955+00:00",
     "correct": true
   },
   {
@@ -178,8 +178,8 @@
     "property_locality": "global",
     "ground_truth": 4,
     "prompt": "You are given an undirected graph as an edge list.\n\nGraph:\nGRAPH (n=13, m=19):\n0 8\n0 9\n1 2\n1 4\n1 9\n1 12\n2 3\n2 4\n2 10\n3 4\n3 5\n3 10\n4 8\n5 6\n5 9\n5 11\n6 9\n7 8\n11 12\n\nQuestion:\nHow many triangles are in this graph?\n\nRespond with only a JSON object in this format:\n{\"answer\": <your answer>}",
-    "raw_model_output": "{\"answer\":8}",
-    "parsed_answer": 8,
+    "raw_model_output": "{\"answer\":7}",
+    "parsed_answer": 7,
     "parse_success": true,
     "finish_reason": "stop",
     "failure_type": null,
@@ -188,8 +188,8 @@
     "temperature": 0.0,
     "prompt_tokens": 134,
     "completion_tokens": 5,
-    "timestamp": "2026-08-13T17:41:31.974246+00:00",
-    "absolute_error": 4,
+    "timestamp": "2026-08-15T06:21:20.773964+00:00",
+    "absolute_error": 3,
     "correct": false
   },
   {
@@ -212,7 +212,7 @@
     "temperature": 0.0,
     "prompt_tokens": 128,
     "completion_tokens": 13,
-    "timestamp": "2026-08-13T17:41:35.095991+00:00",
+    "timestamp": "2026-08-15T06:21:22.982901+00:00",
     "absolute_error": 0.23936666666666667,
     "relative_error": 1.0530869628977857,
     "correct_1pct": false,
@@ -239,7 +239,7 @@
     "temperature": 0.0,
     "prompt_tokens": 128,
     "completion_tokens": 6,
-    "timestamp": "2026-08-13T17:41:33.968628+00:00",
+    "timestamp": "2026-08-15T06:21:22.778415+00:00",
     "absolute_error": 1,
     "correct": false
   },
@@ -263,7 +263,7 @@
     "temperature": 0.0,
     "prompt_tokens": 130,
     "completion_tokens": 6,
-    "timestamp": "2026-08-13T17:41:32.932814+00:00",
+    "timestamp": "2026-08-15T06:21:21.549981+00:00",
     "absolute_error": 0,
     "correct": true
   },
@@ -287,7 +287,7 @@
     "temperature": 0.0,
     "prompt_tokens": 126,
     "completion_tokens": 6,
-    "timestamp": "2026-08-13T17:41:33.758216+00:00",
+    "timestamp": "2026-08-15T06:21:22.488501+00:00",
     "absolute_error": 0,
     "correct": true
   },
@@ -311,7 +311,7 @@
     "temperature": 0.0,
     "prompt_tokens": 126,
     "completion_tokens": 6,
-    "timestamp": "2026-08-13T17:41:33.141763+00:00",
+    "timestamp": "2026-08-15T06:21:21.755394+00:00",
     "absolute_error": 0,
     "correct": true
   },
@@ -335,7 +335,7 @@
     "temperature": 0.0,
     "prompt_tokens": 130,
     "completion_tokens": 5,
-    "timestamp": "2026-08-13T17:41:33.784226+00:00",
+    "timestamp": "2026-08-15T06:21:22.465628+00:00",
     "correct": true
   },
   {
@@ -348,8 +348,8 @@
     "property_locality": "global",
     "ground_truth": true,
     "prompt": "You are given an undirected graph as an edge list.\n\nGraph:\nGRAPH (n=11, m=17):\n0 3\n0 4\n0 8\n0 9\n1 3\n1 4\n1 7\n1 9\n2 6\n2 7\n2 8\n2 9\n2 10\n4 9\n5 6\n6 9\n7 8\n\nQuestion:\nIs this graph planar? Answer true or false.\n\nRespond with only a JSON object in this format:\n{\"answer\": <your answer>}",
-    "raw_model_output": "{\"answer\": false}",
-    "parsed_answer": false,
+    "raw_model_output": "{\"answer\": true}",
+    "parsed_answer": true,
     "parse_success": true,
     "finish_reason": "stop",
     "failure_type": null,
@@ -358,8 +358,8 @@
     "temperature": 0.0,
     "prompt_tokens": 128,
     "completion_tokens": 5,
-    "timestamp": "2026-08-13T17:41:33.752441+00:00",
-    "correct": false
+    "timestamp": "2026-08-15T06:21:22.271747+00:00",
+    "correct": true
   },
   {
     "object_id": "graph_simple_erdos_renyi_002",
@@ -381,7 +381,7 @@
     "temperature": 0.0,
     "prompt_tokens": 126,
     "completion_tokens": 5,
-    "timestamp": "2026-08-13T17:41:33.751270+00:00",
+    "timestamp": "2026-08-15T06:21:22.161562+00:00",
     "absolute_error": 3,
     "correct": false
   }

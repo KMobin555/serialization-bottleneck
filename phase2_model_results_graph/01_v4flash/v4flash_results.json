@@ -19,7 +19,7 @@
     "temperature": 0.0,
     "prompt_tokens": 134,
     "completion_tokens": 8,
-    "timestamp": "2026-08-13T17:37:11.300468+00:00",
+    "timestamp": "2026-08-15T06:20:30.046247+00:00",
     "absolute_error": 0.2821,
     "relative_error": 1.0,
     "correct_1pct": false,
@@ -46,7 +46,7 @@
     "temperature": 0.0,
     "prompt_tokens": 133,
     "completion_tokens": 6,
-    "timestamp": "2026-08-13T17:37:10.172820+00:00",
+    "timestamp": "2026-08-15T06:20:29.727780+00:00",
     "absolute_error": 0,
     "correct": true
   },
@@ -70,7 +70,7 @@
     "temperature": 0.0,
     "prompt_tokens": 136,
     "completion_tokens": 6,
-    "timestamp": "2026-08-13T17:37:05.605209+00:00",
+    "timestamp": "2026-08-15T06:20:29.133310+00:00",
     "absolute_error": 0,
     "correct": true
   },
@@ -84,8 +84,8 @@
     "property_locality": "global",
     "ground_truth": 5,
     "prompt": "You are given an undirected graph as an edge list.\n\nGraph:\nGRAPH (n=13, m=19):\n0 8\n0 9\n1 2\n1 4\n1 9\n1 12\n2 3\n2 4\n2 10\n3 4\n3 5\n3 10\n4 8\n5 6\n5 9\n5 11\n6 9\n7 8\n11 12\n\nQuestion:\nWhat is the diameter of this graph?\n\nRespond with only a JSON object in this format:\n{\"answer\": <your answer>}",
-    "raw_model_output": "{\"answer\": 4}",
-    "parsed_answer": 4,
+    "raw_model_output": "{\"answer\": 5}",
+    "parsed_answer": 5,
     "parse_success": true,
     "finish_reason": "stop",
     "failure_type": null,
@@ -94,9 +94,9 @@
     "temperature": 0.0,
     "prompt_tokens": 132,
     "completion_tokens": 6,
-    "timestamp": "2026-08-13T17:37:09.250818+00:00",
-    "absolute_error": 1,
-    "correct": false
+    "timestamp": "2026-08-15T06:20:29.790778+00:00",
+    "absolute_error": 0,
+    "correct": true
   },
   {
     "object_id": "graph_simple_erdos_renyi_001",
@@ -118,7 +118,7 @@
     "temperature": 0.0,
     "prompt_tokens": 132,
     "completion_tokens": 6,
-    "timestamp": "2026-08-13T17:37:06.389579+00:00",
+    "timestamp": "2026-08-15T06:20:29.129767+00:00",
     "absolute_error": 0,
     "correct": true
   },
@@ -142,7 +142,7 @@
     "temperature": 0.0,
     "prompt_tokens": 135,
     "completion_tokens": 5,
-    "timestamp": "2026-08-13T17:37:07.838654+00:00",
+    "timestamp": "2026-08-15T06:20:29.289890+00:00",
     "correct": false
   },
   {
@@ -165,7 +165,7 @@
     "temperature": 0.0,
     "prompt_tokens": 134,
     "completion_tokens": 5,
-    "timestamp": "2026-08-13T17:37:08.535223+00:00",
+    "timestamp": "2026-08-15T06:20:29.266439+00:00",
     "correct": true
   },
   {
@@ -188,7 +188,7 @@
     "temperature": 0.0,
     "prompt_tokens": 132,
     "completion_tokens": 6,
-    "timestamp": "2026-08-13T17:37:07.206749+00:00",
+    "timestamp": "2026-08-15T06:20:29.282287+00:00",
     "absolute_error": 1,
     "correct": false
   },
@@ -212,7 +212,7 @@
     "temperature": 0.0,
     "prompt_tokens": 126,
     "completion_tokens": 8,
-    "timestamp": "2026-08-13T17:37:18.672967+00:00",
+    "timestamp": "2026-08-15T06:20:31.044780+00:00",
     "absolute_error": 0.2273,
     "relative_error": 1.0,
     "correct_1pct": false,
@@ -239,7 +239,7 @@
     "temperature": 0.0,
     "prompt_tokens": 125,
     "completion_tokens": 6,
-    "timestamp": "2026-08-13T17:37:17.754234+00:00",
+    "timestamp": "2026-08-15T06:20:30.646435+00:00",
     "absolute_error": 1,
     "correct": false
   },
@@ -263,7 +263,7 @@
     "temperature": 0.0,
     "prompt_tokens": 128,
     "completion_tokens": 6,
-    "timestamp": "2026-08-13T17:37:12.136617+00:00",
+    "timestamp": "2026-08-15T06:20:29.892870+00:00",
     "absolute_error": 0,
     "correct": true
   },
@@ -287,7 +287,7 @@
     "temperature": 0.0,
     "prompt_tokens": 124,
     "completion_tokens": 6,
-    "timestamp": "2026-08-13T17:37:17.034323+00:00",
+    "timestamp": "2026-08-15T06:20:30.637877+00:00",
     "absolute_error": 0,
     "correct": true
   },
@@ -311,7 +311,7 @@
     "temperature": 0.0,
     "prompt_tokens": 124,
     "completion_tokens": 6,
-    "timestamp": "2026-08-13T17:37:13.451120+00:00",
+    "timestamp": "2026-08-15T06:20:29.868275+00:00",
     "absolute_error": 0,
     "correct": true
   },
@@ -335,7 +335,7 @@
     "temperature": 0.0,
     "prompt_tokens": 127,
     "completion_tokens": 5,
-    "timestamp": "2026-08-13T17:37:15.498840+00:00",
+    "timestamp": "2026-08-15T06:20:30.480662+00:00",
     "correct": false
   },
   {
@@ -358,7 +358,7 @@
     "temperature": 0.0,
     "prompt_tokens": 126,
     "completion_tokens": 5,
-    "timestamp": "2026-08-13T17:37:16.210166+00:00",
+    "timestamp": "2026-08-15T06:20:30.616361+00:00",
     "correct": true
   },
   {
@@ -381,7 +381,7 @@
     "temperature": 0.0,
     "prompt_tokens": 124,
     "completion_tokens": 6,
-    "timestamp": "2026-08-13T17:37:14.539038+00:00",
+    "timestamp": "2026-08-15T06:20:30.390232+00:00",
     "absolute_error": 1,
     "correct": false
   }
