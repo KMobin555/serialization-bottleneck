@@ -290,7 +290,11 @@ def normalize_answer(answer: Any, property_name: str) -> tuple[Any, bool]:
     raise ValueError(f"unknown property: {property_name}")
 
 
-def parse_answer(raw: str, property_name: str) -> tuple[Any, bool]:
+def is_truncated(finish_reason: str | None, completion_tokens: int | None, max_tokens: int) -> bool:
+    return finish_reason == "length" or (completion_tokens is not None and completion_tokens >= max_tokens)
+
+
+def parse_answer(raw: str, property_name: str, truncated: bool = False) -> tuple[Any, bool]:
     stripped = raw.strip()
     try:
         parsed = json.loads(stripped)
@@ -309,6 +313,19 @@ def parse_answer(raw: str, property_name: str) -> tuple[Any, bool]:
             ans, ok = normalize_answer(parsed["answer"], property_name)
             if ok:
                 return ans, True
+    if truncated:
+        # The response hit the token cap before finishing, and neither JSON
+        # step above found an answer. Do NOT run the raw-string fallback here:
+        # its "extract the first number / true-false-yes-no word" heuristic
+        # exists for a model that gave a complete answer outside a JSON
+        # wrapper, not for a chain-of-thought cut off mid-sentence. A
+        # truncated trace routinely contains numbers that are not the answer
+        # -- e.g. "...the graph has 13 nodes and I need to count triangles by
+        # checking..." would otherwise have its "13" mis-read as a
+        # triangle_count answer. Falling through here keeps parse_success
+        # False so classify_failure correctly labels this
+        # reasoning_truncated, instead of silently scoring a guess as data.
+        return None, False
     ans, ok = normalize_answer(stripped, property_name)
     return (ans, True) if ok else (None, False)
 
@@ -372,10 +389,7 @@ def classify_failure(ok, finish_reason, completion_tokens, max_tokens):
     `parse_failure`. Both are treated as incorrect. None when parsed ok."""
     if ok:
         return None
-    truncated = finish_reason == "length" or (
-        completion_tokens is not None and completion_tokens >= max_tokens
-    )
-    return "reasoning_truncated" if truncated else "parse_failure"
+    return "reasoning_truncated" if is_truncated(finish_reason, completion_tokens, max_tokens) else "parse_failure"
 
 
 def make_record(row, property_name, raw_output, parsed, ok, model, provider,
@@ -664,7 +678,8 @@ async def run(args, config: ModelConfig, log_dir_key: str) -> None:
             client, args.model, prompt, args.temperature, args.max_tokens,
             extra_body, reasoning_effort, response_format
         )
-        parsed, ok = parse_answer(raw, prop)
+        truncated = is_truncated(finish_reason, usage.get("completion_tokens"), args.max_tokens)
+        parsed, ok = parse_answer(raw, prop, truncated=truncated)
         rec = make_record(row, prop, raw, parsed, ok, args.model, args.provider,
                           args.temperature, prompt, usage, finish_reason, args.max_tokens)
         log.debug("OK  %-28s %-18s parse=%s in=%s out=%s %.2fs ans=%s",
