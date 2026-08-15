@@ -5,3 +5,4 @@ __pycache__/
 .venv/
 .impeccable/
 logs/
+phase2_model_results_graph/phase2_commands.txt
