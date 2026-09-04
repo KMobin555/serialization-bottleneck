@@ -22,7 +22,7 @@ calls — it only builds the benchmark that Phase 2 queries.
 |------|----------|
 | `graph_exp1_dataset.json` | 300 graph records: edge-list string + 8 ground-truth properties + metadata |
 | `graph_exp1_summary.json` | Summary statistics (counts, per-tier distributions, bipartite/planar balance) |
-| `spotcheck_exp1_graph.png` | 3×5 grid, one graph per (tier × family), for visual sanity |
+| `spotcheck_exp1_graph.png` | 3×6 grid, one graph per (tier × family), for visual sanity |
 
 This is the second domain of Experiment 1, sibling to
 [`phase1_dataset/`](../phase1_dataset/README.md) (Geometry). It follows the
@@ -38,11 +38,19 @@ independent verification from the serialized string — adapted to graphs.
 | medium | 100 | 16–40 | Core measurement |
 | hard   | 100 | 41–80 | Stress test |
 
-Each tier splits into 5 graph families. The PDF's target is 20/family/tier
-(range 18–22, "exact balance is not required"); the committed split is
-**erdős_renyi 20 / barabasi_albert 19 / watts_strogatz 19 / random_bipartite
-22 / random_planar 20** — 100 per tier, 300 total. See §3 for why the split
-is not perfectly even.
+Each tier splits into 4 **quadrants** on (`is_bipartite`, `is_planar`) — 25
+graphs each, giving an exact 50/50 split on both booleans, independently and
+simultaneously, in every tier. This deliberately overrides the PDF's own
+"aim for approximately 25–35%" target for these two properties — see §4 for
+why, and the note at the top of the notebook. Each quadrant is built by one
+or more of 6 named generation methods:
+
+| Quadrant | Count/tier | Family label(s) |
+|----------|-----------|------------------|
+| bipartite ∧ planar | 25 | `bipartite_planar` (new; constructive, not rejection-sampled — see §2 Cell 5) |
+| bipartite ∧ ¬planar | 25 | `random_bipartite` |
+| ¬bipartite ∧ planar | 25 | `random_planar` |
+| ¬bipartite ∧ ¬planar | 25 | `erdos_renyi` (9) / `barabasi_albert` (8) / `watts_strogatz` (8) |
 
 ### The 8 properties (Table 8)
 
@@ -75,12 +83,13 @@ runs generation.
 Installs `networkx` + `scipy` + `matplotlib`, imports, prints the NetworkX
 version. Written for Colab (`!pip install`), works locally too.
 
-### Cell 3 — Section 1: tiers, families, validity
+### Cell 3 — Section 1: tiers and validity
 
 `TIERS` holds `(vmin, vmax)` node-count bounds per tier — no coordinate axis
 here, unlike geometry; a graph's complexity axis is node count alone.
 
-`PER_FAMILY` fixes the per-tier count for each of the 5 families.
+`PER_QUADRANT = 25` fixes the per-tier count for each of the 4
+(`is_bipartite`, `is_planar`) quadrants (25 × 4 = 100/tier).
 `check_validity(G, vmin, vmax)` is the Section 4.2 gate, returning
 `(True, None)` or `(False, reason)`:
 
@@ -93,36 +102,57 @@ here, unlike geometry; a graph's complexity axis is node count alone.
 | 5 | `too_few_edges` | `m >= n - 1` |
 | 6 | `too_many_edges` | `m <= C(n,2)/2` |
 
-### Cell 5 — Section 2: the five family generators
+### Cell 5 — Section 2: the four quadrant generators
 
-All five are **rejection samplers**, same pattern as geometry: draw a fresh
-`n` from the tier range on every attempt (not fixed by the caller), build a
-candidate, run `check_validity`, retry up to `max_tries=3000`.
+Three of the four are **rejection samplers**, same pattern as geometry: draw
+a fresh `n` from the tier range on every attempt (not fixed by the caller),
+build a candidate, run `check_validity` plus the quadrant's boolean checks,
+retry up to `max_tries=3000`. The fourth (bipartite ∧ planar) is
+**constructive** instead — pure rejection sampling on it turned out
+unreliable (see below), so it's built to satisfy both properties directly.
 
-- **`gen_erdos_renyi`** — `nx.gnp_random_graph(n, p)` with `p` derived from a
-  target expected degree drawn uniformly from `[3, 6]`.
-- **`gen_barabasi_albert`** — `nx.barabasi_albert_graph(n, m)`,
-  `m ∈ {2, 3, 4}`, skipped if `m >= n`.
-- **`gen_watts_strogatz`** — `nx.watts_strogatz_graph(n, k, p)`,
-  `k ∈ {4, 6}`, `p ∈ {0.1, 0.3, 0.5}`, skipped if `k >= n`.
-- **`gen_random_bipartite`** — `nx.bipartite.random_graph(n1, n2, p)` with
-  `n1 + n2 = n` and the ratio **between the two partitions**, `n1/n2`,
-  constrained to `[0.3, 0.7]` (PDF Table 7 — this is a ratio between
-  partition sizes, not either partition's share of `n`). Found by exact
-  integer search over `n`'s valid splits rather than rounding a continuous
-  target, since rounding can overshoot the bound for small `n` — e.g. `n=7`
-  admits only the single split `(2, 5)` (ratio `0.4`); naive rounding can
-  land on `(3, 4)` (ratio `0.75`, outside the bound).
-- **`gen_random_planar`** — Delaunay triangulation of `n` random points
-  (always planar — any subgraph of a planar graph is planar too), then edges
-  are randomly thinned toward a target within the `3n-6` planar bound,
-  reverting any removal that would disconnect the graph.
+- **`gen_bipartite_planar`** (quadrant 1, family `bipartite_planar`) —
+  build a random bipartite **spanning tree** first (a tree is always
+  bipartite and always planar, and connects all `n` nodes with exactly
+  `n-1` edges), then add extra cross-partition edges **one at a time**,
+  keeping each only if `nx.check_planarity` still passes afterward,
+  discarding it otherwise. Guarantees both properties by construction.
+  *Why not rejection sampling here too:* bipartite planar graphs are capped
+  at `m <= 2n-4` edges — a much tighter bound than general planar graphs
+  (`3n-6`) — so a randomly-drawn bipartite graph is planar only by chance,
+  and that chance drops fast as `n` grows. Measured before committing to the
+  constructive method: pure rejection sampling on `gen_bipartite_nonplanar`'s
+  own generator (relaxed to lower density) succeeded only 37/75 times across
+  the three tiers, against 75/75 for the constructive method, and ran ~12×
+  slower even at that reduced success rate.
+- **`gen_bipartite_nonplanar`** (quadrant 2, family `random_bipartite`) —
+  `nx.bipartite.random_graph(n1, n2, p)` with `n1 + n2 = n` and the ratio
+  **between the two partitions**, `n1/n2`, constrained to `[0.3, 0.7]` (PDF
+  Table 7 — a ratio between partition sizes, not either partition's share of
+  `n`; found by exact integer search over `n`'s valid splits rather than
+  rounding a continuous target, since rounding can overshoot the bound for
+  small `n` — e.g. `n=7` admits only the split `(2, 5)`, ratio `0.4`; naive
+  rounding can land on `(3, 4)`, ratio `0.75`, outside the bound). Density
+  `p ∈ [0.2, 0.45]`, rejection-sampled for `is_planar() == False`.
+- **`gen_nonbipartite_planar`** (quadrant 3, family `random_planar`) —
+  Delaunay triangulation of `n` random points (always planar — any subgraph
+  of a planar graph is planar too), edges thinned toward a target within the
+  `3n-6` planar bound (reverting any removal that would disconnect the
+  graph), rejection-sampled for `is_bipartite() == False` — easy, since
+  Delaunay-derived graphs are triangle-rich almost every time.
+- **`gen_nonbipartite_nonplanar`** (quadrant 4) — rotates the three original
+  dense families: `erdos_renyi` (`nx.gnp_random_graph`, expected degree
+  `[4, 7]`), `barabasi_albert` (`nx.barabasi_albert_graph`, `m ∈ {3, 4}`),
+  `watts_strogatz` (`nx.watts_strogatz_graph`, `k ∈ {4, 6}`,
+  `p ∈ {0.1, 0.3, 0.5}`) — split 9/8/8 per tier, rejection-sampled for both
+  booleans `False`. Easy at these densities; almost every draw already
+  qualifies.
 
 All generators pass the shared `rng` (a single `random.Random(seed)`
 instance) directly as NetworkX's `seed` parameter — NetworkX accepts a
-`random.Random` instance natively, so one seed stream drives every family,
-every parameter draw, and the later relabeling step, exactly as geometry
-drives everything from one `rng`.
+`random.Random` instance natively, so one seed stream drives every
+generator's parameter draws, every planarity-check retry, and the later
+relabeling step, exactly as geometry drives everything from one `rng`.
 
 ### Cell 7 — Section 3: chromatic number
 
@@ -180,26 +210,26 @@ geometry's `maybe_reverse` (winding direction).
 
 ```json
 {
-  "object_id": "graph_simple_erdos_renyi_001",
+  "object_id": "graph_simple_bipartite_planar_001",
   "tier": "simple",
-  "family": "erdos_renyi",
-  "num_nodes": 13,
-  "num_edges": 19,
-  "edge_list": "GRAPH (n=13, m=19):\n0 8\n0 9\n1 2\n...",
+  "family": "bipartite_planar",
+  "num_nodes": 7,
+  "num_edges": 6,
+  "edge_list": "GRAPH (n=7, m=6):\n0 5\n1 3\n2 5\n3 4\n4 5\n5 6",
   "properties": {
-    "triangle_count": 4,
-    "is_bipartite": false,
+    "triangle_count": 0,
+    "is_bipartite": true,
     "is_planar": true,
-    "diameter": 5,
-    "chromatic_number": 3,
-    "avg_clustering": 0.2821,
-    "degree_of_node_0": 2,
-    "edge_count": 19
+    "diameter": 4,
+    "chromatic_number": 2,
+    "avg_clustering": 0.0,
+    "degree_of_node_0": 1,
+    "edge_count": 6
   },
   "metadata": {
-    "generation_params": {"p": 0.2857, "target_degree": 3.43},
+    "generation_params": {"n1": 2, "n2": 5, "extra_edges": 0},
     "random_seed": 42,
-    "clique_number": 3,
+    "clique_number": 2,
     "chromatic_number_certified": true,
     "is_connected": true
   }
@@ -211,13 +241,17 @@ geometry's `maybe_reverse` (winding direction).
 
 ### Cell 11 — Section 4: build the dataset and summary
 
-`build_dataset(seed=42)` iterates tier → family → index and calls the
-dispatcher. Generation failure is **fatal**: if a generator exhausts 3000
-tries and returns `None`, `build_dataset` raises rather than emitting a short
-dataset.
+`build_dataset(seed=42)` iterates tier → quadrant → index and calls each
+quadrant's generator (25 bipartite_planar, 25 random_bipartite, 25
+random_planar, then 9/8/8 erdos_renyi/barabasi_albert/watts_strogatz for
+quadrant 4). Generation failure is **fatal**: if a generator exhausts its
+retry budget and returns `None`, `build_dataset` raises rather than emitting
+a short dataset.
 
 `summarize(records)` produces `graph_exp1_summary.json`: `total`,
 `counts_by_tier_family`, `bipartite_overall`, `planar_overall`,
+`boolean_balance_by_tier` (bipartite/not-bipartite and planar/not-planar
+counts per tier — the direct check that both are exactly 50/50),
 `distribution_by_tier` (min/max/mean/median/std for `num_nodes`,
 `num_edges`, `triangle_count`, `diameter`, `chromatic_number`,
 `avg_clustering`, `edge_list_length`), and the chromatic-number
@@ -242,11 +276,14 @@ on their own. Worth closing in a port.
 
 ### Cell 15 — Section 6: visual spot-check
 
-Plots one graph per (tier × family) — 15 graphs — into a 3×5 grid using
-`nx.draw` with a spring layout, saves `spotcheck_exp1_graph.png` at 110 dpi.
-Eyeball check: Barabási–Albert should show visible hubs, Watts–Strogatz
-should look ring-like with a few long-range rewires, random-planar should
-look like a non-crossing mesh. Not an automated assertion.
+Plots one graph per (tier × family) — 18 graphs (6 families × 3 tiers) —
+into a 3×6 grid using `nx.draw` with a spring layout, saves
+`spotcheck_exp1_graph.png` at 110 dpi, titled with each graph's actual
+`is_bipartite`/`is_planar` values. Eyeball check: `bipartite_planar` should
+look sparse and tree-like, `random_bipartite` should show a dense crossing
+pattern with a visible two-group structure, `random_planar` a clean
+non-crossing mesh, `barabasi_albert` visible hubs, `watts_strogatz`
+ring-like with a few long-range rewires. Not an automated assertion.
 
 ### Cell 17 — Section 8: Colab download
 
@@ -274,42 +311,62 @@ Same `try/except` pattern as geometry — downloads on Colab, no-ops locally
 
 From `graph_exp1_summary.json`:
 
-- **bipartite_overall = 71 / 300 (23.7%)**, **planar_overall = 93 / 300
-  (31.0%)** — against the PDF's "aim for approximately 25–35%" for both.
-  Planar lands inside the target band; bipartite falls just short. This is
-  structural, not a tuning miss: `random_bipartite` is the only family that
-  *guarantees* a bipartite instance (66/66), and it is already set to the top
-  of the PDF's allowed 18–22 per-tier range (22). The other four families are
-  all triangle-rich by construction — Erdős–Rényi at expected degree 3–6,
-  Barabási–Albert's preferential attachment, Watts–Strogatz's ring-lattice
-  rewiring, and Delaunay-derived planar graphs all produce odd cycles almost
-  every time — so they contribute only 5 incidental bipartite hits combined
-  across 234 graphs (all 5 from random-planar; 0 from ER, BA, WS). Closing the
-  remaining gap without breaking per-family balance would require either
-  loosening the PDF's family-balance tolerance or adding a sixth,
-  tree-biased family — neither attempted here, since the PDF states the
-  target as "aim for," not a hard gate, and 71 positive / 229 negative
-  instances is already ample for the boolean-property precision/recall/
-  confusion-matrix reporting in Section 6.
-- **chromatic_number_uncertified_count = 1**
-  (`graph_hard_watts_strogatz_008`) — every other graph's chromatic number
-  closed via the clique certificate or the time-boxed backtracking search;
-  this one graph didn't close within the 15s budget and is excluded from
-  querying/evaluation per the PDF's instruction, not approximated.
-- **Scale separation across tiers** is large and intentional:
+- **bipartite_overall = 150 / 300 (50.0%), planar_overall = 150 / 300
+  (50.0%) — and both are exactly 50/50 within *every* tier**
+  (`boolean_balance_by_tier`: 50/50 bipartite and 50/50 planar in simple,
+  medium, and hard individually, not just in aggregate).
+
+  **Why this exists, and why it overrides the PDF's own stated target.**
+  An earlier build followed the PDF's literal instruction ("aim for
+  approximately 25–35%" true on both properties) and landed at 23.7%
+  bipartite / 31.0% planar overall. Phase 3 evaluation on that build then
+  surfaced a real artifact: several models (Qwen3-32B predicting
+  "bipartite" on 0/300 graphs; Llama4-Scout on 1/300) scored *higher*
+  accuracy on `is_bipartite` on the medium/hard tiers than on simple —
+  backwards from the expected "harder tier, lower accuracy" pattern. The
+  cause: those models were essentially always guessing "false," and
+  "always guess false" scores exactly the tier's true false-rate — which
+  happened to be slightly higher on medium/hard (77–78%) than simple (74%)
+  in that build purely because the true class split shifted slightly by
+  tier. So the rising accuracy measured the shifting class balance, not
+  improving model skill. Ground truth was independently re-verified twice
+  (fresh BFS-bipartiteness check across all 300 graphs, fresh from-scratch
+  backtracking chromatic-number solver across the simple+medium tiers) and
+  confirmed correct both times — this was a class-imbalance artifact, not a
+  data bug. The fix decided on: eliminate the possibility of that artifact
+  by construction, by making both booleans exactly 50/50 in every tier, so
+  a constant-answer strategy scores ~50% everywhere and can never look like
+  "improving with complexity."
+- **This required a new generation family.** Rejection sampling handles 3 of
+  the 4 (bipartite, planar) quadrants easily, but "bipartite AND planar
+  simultaneously" is capped at `m <= 2n-4` edges (tighter than the general
+  `3n-6` planar bound), so a randomly-drawn bipartite graph is planar only
+  by chance, and decreasingly so as `n` grows. `bipartite_planar` — a
+  bipartite spanning tree with planarity-checked extra edges added one at a
+  time — was added specifically to make this quadrant reliable (see §2 Cell
+  5 for the measured 37/75 vs. 75/75 comparison that motivated it).
+- **Side effects on the other properties, all expected, not bugs:**
+  `chromatic_number` drops (mean 3.18→3.42→3.39 in the old build vs.
+  **2.72→2.82→2.91** now) because half the dataset is bipartite (chromatic
+  number ≤ 2 whenever there's at least one edge) and a further chunk is
+  planar (chromatic number ≤ 4 always, by the four-color theorem).
+  `triangle_count` and `avg_clustering` both develop a heavy spike at 0
+  (median triangle_count is now 0.0 / 0.5 / 0.5 across tiers) for the same
+  reason — bipartite graphs are triangle-free by definition. None of this
+  is a defect; it's the direct, expected consequence of guaranteeing 50% of
+  the dataset is bipartite.
+- **chromatic_number_uncertified_count = 0** — every graph's chromatic
+  number closed via the clique certificate or the time-boxed backtracking
+  search on this build; nothing needed exclusion.
+- **Scale separation across tiers** is still large and intentional:
 
   | Tier | mean nodes | mean edges | mean triangles | mean edge-list length |
   |------|-----------|-----------|-----------------|------------------------|
-  | simple | 12.14 | 22.71 | 9.26 | 120 chars |
-  | medium | 28.18 | 69.22 | 22.32 | 385 chars |
-  | hard   | 61.26 | 176.96 | 39.29 | 1,025 chars |
+  | simple | 11.64 | 19.62 | 5.50 | 105 chars |
+  | medium | 28.43 | 59.19 | 13.37 | 333 chars |
+  | hard   | 62.42 | 180.59 | 28.90 | 1,047 chars |
 
-  `chromatic_number` stays compact across tiers (mean 3.18 → 3.42 → 3.39,
-  max 5 throughout) since every family targets sparse-to-moderate density by
-  design (Table 7's degree/`k`/`m` ranges) — this is expected, not a bug:
-  chromatic number is bounded by max degree + 1 and these graphs are far
-  from dense.
-- `avg_clustering` decreases with tier (0.31 → 0.23 → 0.18 mean) — larger,
+- `avg_clustering` decreases with tier (mean 0.18 → 0.14 → 0.12) — larger,
   sparser graphs have proportionally fewer closed triangles per node.
 
 ## 5. How Phase 2 consumes this
@@ -339,9 +396,15 @@ porting section:
 **Reusable structure — keep the shape, change the content:**
 
 - The tier system (3 difficulty levels defined by a complexity parameter).
-- The category split within each tier (5 balanced structural families here;
-  3 for geometry — the count is domain-specific, the *pattern* of named,
-  balanced generation categories is not).
+- The category split within each tier (6 named structural families here,
+  organized around 4 target quadrants on the two boolean properties; 3
+  families for geometry — the count and organizing axis are
+  domain-specific, the *pattern* of named, balanced generation categories
+  is not).
+- Deliberately targeting an exact 50/50 split on any boolean property that
+  a model could otherwise game by always answering the majority class —
+  not just "aim for roughly balanced," but verified per-tier, per-property
+  balance in the summary stats.
 - Rejection sampling against an explicit, enumerated validity rule set,
   where every rejection has a named reason.
 - Compute-invariant-properties → randomize-presentation → serialize →
