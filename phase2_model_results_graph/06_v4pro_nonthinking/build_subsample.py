@@ -13,23 +13,19 @@ Same procedure as ../../phase2_model_results/06_v4pro_nonthinking/build_subsampl
 
 Algorithm
 ---------
-1. Group the dataset by (tier, family) -- 18 groups. Per-tier family sizes
-   are 25/25/25/9/8/8 (bipartite_planar/random_bipartite/random_planar/
-   erdos_renyi/barabasi_albert/watts_strogatz), matching
-   graph_exp1_summary.json -- the 4-quadrant, 50/50-bipartite/50/50-planar
-   generation scheme (see ../../phase1_dataset_graph/README.md S4).
+1. Group the dataset by (tier, family) -- 15 groups. Per-tier family sizes
+   are 20/19/19/22/20 (erdos_renyi/barabasi_albert/watts_strogatz/
+   random_bipartite/random_planar), matching graph_exp1_summary.json.
 2. Per tier, allocate the tier's quota across families by **largest
-   remainder** at 20%: exact quotas 5.0/5.0/5.0/1.8/1.6/1.6, floors
-   5/5/5/1/1/1=18, 2 leftover slots go to the largest fractional parts
-   (erdos_renyi .8, then barabasi_albert .6) -> 5/5/5/2/2/1, exactly 20 per
-   tier, 60 total. Allocating *within* each tier is what guarantees equal
-   tier counts.
+   remainder** at 20%: exact quotas 4.0/3.8/3.8/4.4/4.0, floors 4/3/3/4/4=18,
+   2 leftover slots go to the largest fractional parts (barabasi_albert .8,
+   then watts_strogatz .8) -> 4/4/4/4/4, exactly 20 per tier, 60 total.
+   Allocating *within* each tier is what guarantees equal tier counts.
 3. Draw each group's slots with `random.Random(seed).sample()`, iterating
    tiers in order (simple, medium, hard) and families in the dataset's own
-   generation order (bipartite_planar, random_bipartite, random_planar,
-   erdos_renyi, barabasi_albert, watts_strogatz). Order matters: it fixes
-   the RNG's consumption sequence, which is what makes the result
-   reproducible.
+   generation order (erdos_renyi, barabasi_albert, watts_strogatz,
+   random_bipartite, random_planar). Order matters: it fixes the RNG's
+   consumption sequence, which is what makes the result reproducible.
 4. Validate, then write the ids sorted.
 
 Usage
@@ -58,8 +54,7 @@ DEFAULT_OUTPUT = HERE / "subsample_v4pro_nonthinking.json"
 # changes which graphs are drawn for a given seed. Matches the Phase-1 notebook's
 # FAMILIES order.
 TIERS = ("simple", "medium", "hard")
-FAMILIES = ("bipartite_planar", "random_bipartite", "random_planar",
-            "erdos_renyi", "barabasi_albert", "watts_strogatz")
+FAMILIES = ("erdos_renyi", "barabasi_albert", "watts_strogatz", "random_bipartite", "random_planar")
 
 N_PROPERTIES = 8        # queries per graph, used for the n_queries field
 DEFAULT_RATE = 0.2

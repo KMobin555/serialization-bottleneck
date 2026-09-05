@@ -139,6 +139,24 @@ case).
 - **This is the second of three domains.** The Section 9 rule needs at least
   2 of 3 domains, so the final go/no-go is deferred until this notebook has
   real results *and* the tabular domain is evaluated.
+- **`is_planar`'s accuracy-rises-with-tier artifact is only partially fixed,
+  by design.** Phase 1's `random_bipartite`/`random_planar` families are each
+  built with an exact internal 50/50 split on their own named boolean
+  property (see `../phase1_dataset_graph/README.md` §1). This makes
+  `is_bipartite`'s *overall* true-rate flat across tiers (12%/11%/11%), so
+  Qwen3-32B and Llama4-Scout's near-constant "false" prediction no longer
+  looks like it improves with difficulty there. It does **not** flatten
+  `is_planar`'s overall true-rate (42% simple / 13% medium / 10% hard):
+  small sparse graphs from the *other* families (`erdos_renyi`,
+  `barabasi_albert`, `watts_strogatz`, `random_bipartite`) are planar by
+  incidental chance far more often than large sparse graphs are, and that
+  effect lives outside `random_planar` entirely, so balancing only that one
+  family can't correct it. Qwen3-32B and Llama4-Scout's `is_planar` accuracy
+  still rises with tier (68%→87%→90% for Qwen3-32B) for the same
+  base-rate-tracking reason as before the rebalance — a deliberate,
+  documented tradeoff, not an oversight: closing it would require touching
+  how the other 4 families incidentally produce planar graphs, out of scope
+  for the current fix.
 
 ---
 
