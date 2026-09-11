@@ -139,24 +139,46 @@ case).
 - **This is the second of three domains.** The Section 9 rule needs at least
   2 of 3 domains, so the final go/no-go is deferred until this notebook has
   real results *and* the tabular domain is evaluated.
-- **`is_planar`'s accuracy-rises-with-tier artifact is only partially fixed,
-  by design.** Phase 1's `random_bipartite`/`random_planar` families are each
-  built with an exact internal 50/50 split on their own named boolean
-  property (see `../phase1_dataset_graph/README.md` §1). This makes
-  `is_bipartite`'s *overall* true-rate flat across tiers (12%/11%/11%), so
-  Qwen3-32B and Llama4-Scout's near-constant "false" prediction no longer
-  looks like it improves with difficulty there. It does **not** flatten
-  `is_planar`'s overall true-rate (42% simple / 13% medium / 10% hard):
-  small sparse graphs from the *other* families (`erdos_renyi`,
-  `barabasi_albert`, `watts_strogatz`, `random_bipartite`) are planar by
-  incidental chance far more often than large sparse graphs are, and that
-  effect lives outside `random_planar` entirely, so balancing only that one
-  family can't correct it. Qwen3-32B and Llama4-Scout's `is_planar` accuracy
-  still rises with tier (68%→87%→90% for Qwen3-32B) for the same
-  base-rate-tracking reason as before the rebalance — a deliberate,
-  documented tradeoff, not an oversight: closing it would require touching
-  how the other 4 families incidentally produce planar graphs, out of scope
-  for the current fix.
+- **`is_planar`'s accuracy-rises-with-tier artifact is now fully fixed.**
+  An earlier build closed this for `is_bipartite` only (Phase 1's
+  `random_bipartite`/`random_planar` families each have an exact internal
+  50/50 split on their own named boolean property, see
+  `../phase1_dataset_graph/README.md` §1) but left `is_planar`'s *overall*
+  true-rate swinging by tier (42% simple / 13% medium / 10% hard), because
+  small sparse graphs from the *other* 4 families were incidentally planar
+  far more often than large ones — an effect living entirely outside
+  `random_planar`, so balancing only that family couldn't correct it.
+  Phase 1 now corrects every such incidental hit after generation
+  (`try_force_nonplanar` / `try_force_nonbipartite_preserve_planar`, §1/§2
+  there), so `is_bipartite=True` and `is_planar=True` come *only* from
+  `random_bipartite`/`random_planar` respectively, in every tier, with
+  certainty. Both properties' overall true-rate is now exactly flat (11.0%,
+  10.0%) across all 3 tiers, and the artifact is gone in the data that
+  mattered most: Qwen3-32B and Llama4-Scout's `is_planar` accuracy is now
+  **90.0% / 90.0% / 90.0%** across simple/medium/hard — flat, matching the
+  majority-class baseline exactly, instead of the previous 68%→87%→90%
+  rise. (Gemini and GPT-4.1-mini still show some tier-to-tier accuracy
+  variation on `is_planar`, but that's now genuine model behavior — they
+  actually vary their True/False predictions by tier rather than defaulting
+  to one answer — not a base-rate artifact.)
+- **V4-Pro (non-thinking)'s subsample had the same artifact, one layer
+  down.** The full dataset being exactly 50/50 on `is_bipartite`/`is_planar`
+  within their named families doesn't guarantee a random *20% draw* from it
+  preserves that balance — `build_subsample.py`'s original stratification
+  was only by `(tier, family)`, so a 4-of-22 or 4-of-20 draw from
+  `random_bipartite`/`random_planar` could land on (and did: observed 4/4
+  True, 0 False for `medium/random_bipartite` and `hard/random_planar`) a
+  badly skewed true/false mix purely by chance, independent of how balanced
+  the source family was. Fixed by adding a second stratification level:
+  each of those two families' quota is now split in half between its own
+  named boolean property before drawing (`SPLIT_FAMILIES` in
+  `../phase2_model_results_graph/06_v4pro_nonthinking/build_subsample.py`),
+  so the subsample is exactly 2 True + 2 False per property per tier — same
+  overall family-level counts and total (60/300) as before, just internally
+  balanced now. V4-Pro's remaining per-tier accuracy variation (e.g. its own
+  True-prediction rate drops from 70% in simple to 0–5% in medium/hard) is
+  therefore now attributable to the model's actual behavior, not to which
+  20 graphs happened to get drawn.
 
 ---
 

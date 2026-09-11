@@ -52,10 +52,21 @@ construction so this is an exact half, not a rounded one. This is deliberate
 and independent of the PDF's own ~25–35%-bipartite/planar-*overall* aim
 (see §4 for the resulting overall percentages, which now sit below that
 range) — the balance target here is *within* the two families that can
-produce each property, not across the whole dataset. `erdos_renyi` /
-`barabasi_albert` / `watts_strogatz` are not split; at their specified
-densities they essentially never produce a bipartite or planar instance, so
-there is no internal mix to balance.
+produce each property, not across the whole dataset.
+
+**No other family may incidentally contribute a True, in any tier.**
+`erdos_renyi` / `barabasi_albert` / `watts_strogatz` never target being
+bipartite or planar, but small sparse graphs from these (and from
+`random_bipartite`'s own instances) are planar by pure chance often enough
+to matter — and that chance shrinks sharply as node count grows, so it was
+quietly making `is_planar`'s *overall* true-rate swing hard by tier (an
+earlier build measured 42%/13%/10% across simple/medium/hard) even though
+`random_planar` itself was already exactly balanced every tier. Every
+generator now checks for this after building its candidate graph and
+corrects it (§2, Cell 5) — so `is_bipartite=True` and `is_planar=True` come
+*only* from `random_bipartite` and `random_planar` respectively, with
+certainty, making both properties' overall true-rate exactly flat across
+all 3 tiers (11.0% and 10.0% — see §4).
 
 ### The 8 properties (Table 8)
 
@@ -106,18 +117,33 @@ here, unlike geometry; a graph's complexity axis is node count alone.
 | 5 | `too_few_edges` | `m >= n - 1` |
 | 6 | `too_many_edges` | `m <= C(n,2)/2` |
 
-### Cell 5 — Section 2: the five family generators, plus 2 false-half variants
+### Cell 5 — Section 2: the five family generators, plus 2 false-half variants, plus cross-family leak correction
 
 All are **rejection samplers**, same pattern as geometry: draw a fresh `n`
 from the tier range on every attempt (not fixed by the caller), build a
 candidate, run `check_validity`, retry up to `max_tries=3000`.
 
+Two helpers, used by every generator below that isn't already guaranteed to
+land on the right side of a property by construction:
+
+- **`try_force_nonplanar(G, rng, cross_partition_only=None)`** — adds edges
+  (only cross-partition pairs if given, to avoid touching bipartiteness)
+  until `nx.check_planarity` fails, respecting rule 6's cap. Returns `None`
+  if the edge budget runs out first (the caller then retries with a fresh
+  `n`, same discipline as `gen_random_planar_false` below).
+- **`try_force_nonbipartite_preserve_planar(G, rng)`** — adds one
+  intra-partition edge (the same odd-cycle trick as
+  `gen_random_bipartite_false`), but only keeps it if the graph is still
+  planar afterward; tries every intra-partition pair before giving up.
+
 - **`gen_erdos_renyi`** — `nx.gnp_random_graph(n, p)` with `p` derived from a
-  target expected degree drawn uniformly from `[3, 6]`.
+  target expected degree drawn uniformly from `[3, 6]`. If the draw is
+  incidentally planar, `try_force_nonplanar` corrects it before returning.
 - **`gen_barabasi_albert`** — `nx.barabasi_albert_graph(n, m)`,
-  `m ∈ {2, 3, 4}`, skipped if `m >= n`.
+  `m ∈ {2, 3, 4}`, skipped if `m >= n`. Same planarity correction.
 - **`gen_watts_strogatz`** — `nx.watts_strogatz_graph(n, k, p)`,
-  `k ∈ {4, 6}`, `p ∈ {0.1, 0.3, 0.5}`, skipped if `k >= n`.
+  `k ∈ {4, 6}`, `p ∈ {0.1, 0.3, 0.5}`, skipped if `k >= n`. Same planarity
+  correction.
 - **`gen_random_bipartite`** — `nx.bipartite.random_graph(n1, n2, p)` with
   `n1 + n2 = n` and the ratio **between the two partitions**, `n1/n2`,
   constrained to `[0.3, 0.7]` (PDF Table 7 — this is a ratio between
@@ -126,19 +152,25 @@ candidate, run `check_validity`, retry up to `max_tries=3000`.
   target, since rounding can overshoot the bound for small `n` — e.g. `n=7`
   admits only the single split `(2, 5)` (ratio `0.4`); naive rounding can
   land on `(3, 4)` (ratio `0.75`, outside the bound). Always genuinely
-  bipartite — this is the family's *true* half (11/tier).
+  bipartite — this is the family's *true* half (11/tier). If incidentally
+  planar, `try_force_nonplanar` corrects it using cross-partition edges
+  only, so `is_bipartite` stays `True`.
 - **`gen_random_planar`** — Delaunay triangulation of `n` random points
   (always planar — any subgraph of a planar graph is planar too), then edges
   are randomly thinned toward a target within the `3n-6` planar bound,
   reverting any removal that would disconnect the graph. Always genuinely
-  planar — this family's *true* half (10/tier).
+  planar — this family's *true* half (10/tier). If incidentally bipartite,
+  `try_force_nonbipartite_preserve_planar` corrects it (rare — measured 1/300
+  in one build — but checked every time; only kept if planarity survives).
 - **`gen_random_bipartite_false`** (`random_bipartite`'s *false* half,
   11/tier) — builds the identical `(n1, n2, p)` bipartite skeleton, then
   adds **one** intra-partition edge. In a connected bipartite graph every
   path between two same-side vertices has even length; closing it with one
   more edge creates an odd cycle, so this deterministically forces
   `is_bipartite=False` — no rejection sampling needed on the property
-  itself, only on `check_validity`.
+  itself, only on `check_validity`. If incidentally planar,
+  `try_force_nonplanar` corrects it freely (bipartiteness is already broken
+  for good, so any edge addition is safe).
 - **`gen_random_planar_false`** (`random_planar`'s *false* half, 10/tier) —
   builds a `nx.gnm_random_graph(n, m)` with `m = min(cap, 3n)` where `cap`
   is rule 6's own limit (`n(n-1)/4`), then checks planarity directly. `3n`
@@ -148,7 +180,10 @@ candidate, run `check_validity`, retry up to `max_tries=3000`.
   bound, avg degree ~6), 0/300 did. At `n=6`, `cap` (7) is below even the
   smallest non-planar simple graph's requirement (K3,3 needs 9 edges) — no
   non-planar graph is reachable there at all; the fresh-`n` retry loop just
-  skips over that (and other too-small) draws.
+  skips over that (and other too-small) draws. (Already guaranteed
+  non-planar by construction+check, so no correction step needed here; its
+  incidental `is_bipartite` rate was already 0 across all measured draws —
+  dense enough at avg degree ~6 to essentially never be bipartite.)
 
 All generators pass the shared `rng` (a single `random.Random(seed)`
 instance) directly as NetworkX's `seed` parameter — NetworkX accepts a
@@ -318,27 +353,43 @@ Same `try/except` pattern as geometry — downloads on Colab, no-ops locally
 
 From `graph_exp1_summary.json`:
 
-- **bipartite_overall = 34 / 300 (11.3%)**, **planar_overall = 65 / 300
-  (21.7%)** — both now *below* the PDF's "aim for approximately 25–35%".
-  This is the direct, expected consequence of the internal 50/50 split
-  described in §1: previously `random_bipartite` (22/tier) was 100% True,
-  giving 66/300 bipartite plus a few incidental hits (71 total, 23.7% —
-  inside the PDF's band); now only its true half (11/tier = 33/300) is,
-  so the overall count drops. Same story for `random_planar` (was 100%
-  planar-True at 20/tier = 60/300 plus incidental hits = 93/300, 31.0%;
-  now only its true half, 10/tier = 30/300, plus incidental hits = 65/300).
-  This tradeoff was made deliberately: **the balance target that matters
-  here is the exact internal 50/50 within each of these two families**,
-  verified per tier in `split_family_boolean_balance` —
-
-  | Tier | random_bipartite true/false | random_planar true/false |
-  |------|------------------------------|----------------------------|
-  | simple | 11 / 11 | 10 / 10 |
-  | medium | 11 / 11 | 10 / 10 |
-  | hard   | 11 / 11 | 10 / 10 |
-
-  — not the PDF's literal overall-percentage aim, which this build
-  deliberately falls outside of as a result.
+- **bipartite_overall = 33 / 300 (11.0%)**, **planar_overall = 30 / 300
+  (10.0%)** — both *exactly* flat across all 3 tiers (11/tier and 10/tier,
+  precisely `random_bipartite`'s and `random_planar`'s own true-half
+  counts, with **zero** incidental contribution from any other family, in
+  any tier — verified directly against `counts_by_tier_family` broken down
+  by boolean value, not just `split_family_boolean_balance`). This closes a
+  gap the internal 50/50 split alone didn't: `random_bipartite` and
+  `random_planar` are each balanced *within themselves*, but the other 4
+  families were still incidentally producing True hits on the property they
+  aren't named after — most visibly, small sparse graphs from
+  `erdos_renyi`/`barabasi_albert`/`watts_strogatz`/`random_bipartite` are
+  planar by pure chance far more often than large sparse graphs are (an
+  earlier build measured 32/80 incidental `is_planar=True` hits in the
+  simple tier from those 4 families combined, vs. 3/80 in medium and 0/80
+  in hard) — which meant a model that always answers "not planar" would
+  still score higher on hard than simple, just from the shifting incidental
+  rate, even though `random_planar` itself was perfectly balanced every
+  tier. `try_force_nonplanar` / `try_force_nonbipartite_preserve_planar`
+  (§2, Cell 5) now correct every such incidental hit after generation —
+  adding edges (cross-partition-only where bipartiteness must be
+  preserved) until the "wrong" property flips back to `False`, retrying
+  with a fresh `n` if no valid fix exists — so only the property-named
+  family can ever contribute a `True`, in every tier, with certainty
+  instead of "almost never."
+- **This narrows the simple tier's achievable node range.** Forcing
+  non-planarity needs enough room to embed a K3,3-like structure, and rule
+  6's edge cap (`n(n-1)/4`) is tight for small `n`; empirically, no fix
+  succeeds below `n=8` for `erdos_renyi`/`barabasi_albert`/`watts_strogatz`,
+  or below `n=10` for `random_bipartite` (its `n1/n2` ratio constraint
+  rules out the balanced-partition split K3,3 itself needs). The retry loop
+  simply keeps redrawing `n` until one works, so the simple tier's observed
+  range is `8–15` rather than the nominal `6–15` (`random_bipartite`
+  specifically starts at `10`) — still within the PDF's tier bound, just
+  not exercising its very smallest end for these families. Accepted as the
+  cost of a hard guarantee rather than a probabilistic one; not fixed
+  further since the tier's own validity range (6–80 spanning all 3 tiers)
+  is otherwise untouched.
 - **chromatic_number_uncertified_count = 0** — every graph's chromatic
   number closed via the clique certificate or the time-boxed backtracking
   search. This took tuning: an earlier version of `gen_random_planar_false`
@@ -347,22 +398,24 @@ From `graph_exp1_summary.json`:
   number too expensive to pin down exactly within the 15s budget at
   near-half density). Switching to a much sparser target (`m = min(cap, 3n)`,
   avg degree ~6 — still comfortably above the `3n-6` planar bound, so still
-  reliably non-planar) closed all 300 with 0 timeouts.
+  reliably non-planar) closed all 300 with 0 timeouts; the cross-family
+  leak-correction edges added on top of that are few enough (usually 1) to
+  not reopen that problem.
 - **Scale separation across tiers** is large and intentional:
 
   | Tier | mean nodes | mean edges | mean triangles | mean edge-list length |
   |------|-----------|-----------|-----------------|------------------------|
-  | simple | 11.61 | 22.83 | 10.59 | 119 chars |
-  | medium | 26.56 | 67.01 | 21.57 | 371 chars |
-  | hard   | 60.03 | 191.57 | 36.83 | 1,105 chars |
+  | simple | 12.36 | 25.51 | 12.19 | 131 chars |
+  | medium | 27.78 | 72.76 | 23.05 | 403 chars |
+  | hard   | 60.85 | 175.21 | 38.47 | 1,014 chars |
 
-  `chromatic_number` stays compact across tiers (mean 3.37 → 3.50 → 3.52,
+  `chromatic_number` stays compact across tiers (mean 3.48 → 3.53 → 3.49,
   max 5 throughout) — most families target sparse-to-moderate density by
-  design (Table 7's degree/`k`/`m` ranges), and even `random_planar_false`'s
-  denser construction stays capped near avg degree 6; chromatic number is
-  bounded by max degree + 1, so these graphs stay far from needing many
-  colors.
-- `avg_clustering` decreases with tier (0.33 → 0.22 → 0.14 mean) — larger,
+  design (Table 7's degree/`k`/`m` ranges), and even the densest
+  construction (`random_planar_false`, plus the occasional leak-correction
+  edge) stays capped near avg degree 6; chromatic number is bounded by max
+  degree + 1, so these graphs stay far from needing many colors.
+- `avg_clustering` decreases with tier (0.33 → 0.22 → 0.15 mean) — larger,
   sparser graphs have proportionally fewer closed triangles per node.
 
 ## 5. How Phase 2 consumes this

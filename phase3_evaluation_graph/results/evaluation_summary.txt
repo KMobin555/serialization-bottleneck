@@ -5,25 +5,25 @@ Models: V4-Flash, Qwen3-32B, Llama4-Scout, Gemini2.5-FL, GPT-4.1-mini, V4-Pro*
 Coverage: V4-Flash 300 graphs / 2400 queries; Qwen3-32B 300 graphs / 2400 queries; Llama4-Scout 300 graphs / 2400 queries; Gemini2.5-FL 300 graphs / 2400 queries; GPT-4.1-mini 300 graphs / 2400 queries; V4-Pro* 60 graphs / 480 queries
 
 HEADLINE: local-vs-global accuracy gap, all capped models.
-  Gemini2.5-FL  gap +59.0pp  [+55.9,+61.9]  p=0.0000
-  GPT-4.1-mini  gap +57.2pp  [+54.6,+59.8]  p=0.0000
-  V4-Flash      gap +56.9pp  [+54.1,+59.8]  p=0.0000
-  Llama4-Scout  gap +54.4pp  [+51.2,+57.6]  p=0.0000
-  Qwen3-32B     gap +53.2pp  [+50.2,+56.2]  p=0.0000
+  Gemini2.5-FL  gap +61.8pp  [+58.8,+64.7]  p=0.0000
+  V4-Flash      gap +57.5pp  [+55.2,+59.9]  p=0.0000
+  GPT-4.1-mini  gap +57.1pp  [+54.4,+59.7]  p=0.0000
+  Llama4-Scout  gap +52.2pp  [+48.9,+55.4]  p=0.0000
+  Qwen3-32B     gap +51.5pp  [+48.4,+54.6]  p=0.0000
 
 MECHANISM: compute failure, not read failure (expected pattern, per-model detail above).
   - degree_of_node_0 / edge_count (readable) vs. triangle_count / diameter /
     chromatic_number / avg_clustering (must compute over the whole structure).
   - is_bipartite / is_planar: compare acc vs. base-rate baseline in Cell 7's tables.
-  - cross-model Spearman rho = 0.93 among capped models: one shared difficulty ordering.
+  - cross-model Spearman rho = 0.89 among capped models: one shared difficulty ordering.
 
-PIVOTAL: V4-Pro* (free reasoning) gap +58.1pp, globals 41.1%.
+PIVOTAL: V4-Pro* (free reasoning) gap +55.8pp, globals 42.5%.
   => compare against geometry's equivalent line to see if the same
      single-pass / no-chain-of-thought story holds cross-domain.
 
-V4-Flash FAILURE MODES (heuristic, n=1141): arithmetic_error 53%, structural_reasoning_error 23%, off_by_one_definition 12%, hallucination 9% (manual review pending).
+V4-Flash FAILURE MODES (heuristic, n=1047): arithmetic_error 52%, parse_failure 27%, off_by_one_definition 12%, structural_reasoning_error 6% (manual review pending).
 
-DECISION (section 9): graphs support OUTCOME A (proceed as planned).
+DECISION (section 9): graphs support OUTCOME see components.
   - global-failure criterion met by 5/5 capped models.
   - FINAL multi-domain go/no-go: compare against geometry's decision; needs
     >=2 of 3 domains to agree (tabular domain not yet evaluated).
