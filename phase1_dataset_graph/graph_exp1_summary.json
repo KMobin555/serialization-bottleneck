@@ -160,153 +160,153 @@
       "num_nodes": {
         "min": 6,
         "max": 15,
-        "mean": 11.83,
+        "mean": 11.44,
         "median": 12.0,
         "std": 2.71
       },
       "num_edges": {
         "min": 6,
-        "max": 45,
-        "mean": 20.1,
-        "median": 19.5,
-        "std": 10.15
+        "max": 33,
+        "mean": 17.51,
+        "median": 18.0,
+        "std": 6.87
       },
       "triangle_count": {
         "min": 0,
-        "max": 41,
-        "mean": 6.81,
+        "max": 23,
+        "mean": 6.13,
         "median": 0.0,
-        "std": 10.61
+        "std": 7.96
       },
       "diameter": {
         "min": 2,
         "max": 8,
-        "mean": 3.86,
+        "mean": 4.1,
         "median": 4.0,
-        "std": 1.15
+        "std": 1.04
       },
       "chromatic_number": {
         "min": 2,
-        "max": 5,
-        "mean": 2.85,
+        "max": 6,
+        "mean": 3.26,
         "median": 2.5,
-        "std": 0.97
+        "std": 1.49
       },
       "avg_clustering": {
         "min": 0.0,
-        "max": 0.67,
-        "mean": 0.19,
+        "max": 0.64,
+        "mean": 0.18,
         "median": 0.0,
         "std": 0.22
       },
       "edge_list_length": {
         "min": 41,
-        "max": 228,
-        "mean": 107.88,
-        "median": 102.0,
-        "std": 48.89
+        "max": 170,
+        "mean": 95.12,
+        "median": 95.0,
+        "std": 33.61
       }
     },
     "medium": {
       "num_nodes": {
         "min": 16,
         "max": 40,
-        "mean": 28.39,
-        "median": 28.5,
-        "std": 7.43
+        "mean": 29.31,
+        "median": 29.0,
+        "std": 7.14
       },
       "num_edges": {
         "min": 17,
-        "max": 137,
-        "mean": 54.0,
-        "median": 44.0,
-        "std": 27.16
+        "max": 134,
+        "mean": 52.66,
+        "median": 45.5,
+        "std": 26.55
       },
       "triangle_count": {
         "min": 0,
-        "max": 118,
-        "mean": 14.08,
+        "max": 123,
+        "mean": 15.52,
         "median": 0.0,
-        "std": 21.32
+        "std": 24.36
       },
       "diameter": {
-        "min": 3,
+        "min": 4,
         "max": 19,
-        "mean": 6.26,
-        "median": 5.0,
-        "std": 3.46
+        "mean": 6.72,
+        "median": 6.0,
+        "std": 2.74
       },
       "chromatic_number": {
         "min": 2,
-        "max": 5,
-        "mean": 2.87,
+        "max": 6,
+        "mean": 3.26,
         "median": 2.5,
-        "std": 0.99
+        "std": 1.49
       },
       "avg_clustering": {
         "min": 0.0,
-        "max": 0.54,
+        "max": 0.72,
         "mean": 0.15,
         "median": 0.0,
-        "std": 0.18
+        "std": 0.19
       },
       "edge_list_length": {
-        "min": 97,
-        "max": 762,
-        "mean": 305.84,
-        "median": 247.0,
-        "std": 150.93
+        "min": 99,
+        "max": 751,
+        "mean": 299.86,
+        "median": 266.5,
+        "std": 147.48
       }
     },
     "hard": {
       "num_nodes": {
         "min": 41,
-        "max": 79,
-        "mean": 59.35,
-        "median": 58.0,
-        "std": 11.04
+        "max": 80,
+        "mean": 61.26,
+        "median": 63.0,
+        "std": 11.68
       },
       "num_edges": {
-        "min": 44,
-        "max": 538,
-        "mean": 135.53,
-        "median": 111.5,
-        "std": 92.99
+        "min": 41,
+        "max": 521,
+        "mean": 128.27,
+        "median": 88.5,
+        "std": 93.5
       },
       "triangle_count": {
         "min": 0,
-        "max": 183,
-        "mean": 22.44,
+        "max": 266,
+        "mean": 33.16,
         "median": 0.0,
-        "std": 35.0
+        "std": 56.41
       },
       "diameter": {
         "min": 4,
-        "max": 37,
-        "mean": 8.82,
-        "median": 7.0,
-        "std": 6.12
+        "max": 31,
+        "mean": 9.75,
+        "median": 8.0,
+        "std": 5.93
       },
       "chromatic_number": {
         "min": 2,
-        "max": 5,
-        "mean": 2.83,
+        "max": 6,
+        "mean": 3.26,
         "median": 2.5,
-        "std": 0.93
+        "std": 1.49
       },
       "avg_clustering": {
         "min": 0.0,
-        "max": 0.49,
-        "mean": 0.12,
+        "max": 0.58,
+        "mean": 0.13,
         "median": 0.0,
-        "std": 0.15
+        "std": 0.19
       },
       "edge_list_length": {
-        "min": 263,
-        "max": 3085,
-        "mean": 787.65,
-        "median": 643.0,
-        "std": 533.69
+        "min": 242,
+        "max": 3002,
+        "mean": 747.38,
+        "median": 525.5,
+        "std": 536.6
       }
     }
   },

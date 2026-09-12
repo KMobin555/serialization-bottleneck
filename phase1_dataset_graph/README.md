@@ -89,6 +89,40 @@ is no longer a "dedicated" family that must grow to supply an exact count),
 and it produces genuine cross-family correlation as a side effect, not a
 bug.
 
+**`chromatic_number` and `triangle_count` are also balanced, not just
+`is_bipartite`/`is_planar`.** Both are mathematically *derived* from
+`is_bipartite`, not independent: every bipartite graph has `triangle_count
+= 0` (bipartite means no odd cycles, and a triangle is a 3-cycle) and every
+connected bipartite graph with an edge has `chromatic_number = 2`
+(2-colorable iff bipartite). Since `is_bipartite=True` is locked at exactly
+50/tier, `chromatic_number = 2` and `triangle_count = 0` are locked at
+*at least* 50/tier too — that's not a generation artifact, it's a
+consequence of the boolean balance above, and can't be changed without
+undoing it. What *is* controllable is the other 50 (the non-bipartite
+half):
+
+- **`chromatic_number`** is split evenly across 3, 4, 5, 6 (~12–13 each,
+  50 total) instead of whatever falls out naturally (an earlier build
+  concentrated heavily on 3/4 and rarely reached 5, never 6). Q3
+  (¬bipartite∧planar, capped at ≤4 by the four-color theorem) supplies
+  values 3 and 4; Q4 (¬bipartite∧¬planar, no such cap) supplies 5 and 6.
+- **`triangle_count`** is spread widely instead of clustering near 0 (an
+  earlier build had ~53% of every tier at exactly 0 counting only the
+  locked bipartite half, but the *non-bipartite* half was itself narrow
+  and skewed low). Now it ranges from single digits to the hundreds within
+  a tier, scaled to that tier's node-count range.
+
+This needed real construction changes for Q3/Q4, described in §2 Cell 5 —
+`random_planar`'s Q3 slots and all of `erdos_renyi`/`barabasi_albert`/
+`watts_strogatz`'s Q4 slots switch to chromatic-number-exact generators
+(losing their distinct structural "flavor" for *those* slots specifically,
+since precise chromatic control needs a shared technique); `erdos_renyi`/
+`barabasi_albert`/`watts_strogatz`'s (much smaller) Q3 slots keep their
+original flavored construction unchanged, since it already reliably
+produces `chromatic_number=3` and can stay as extra diversity within that
+bucket. Family sizes are untouched by any of this — still exactly 20/tier
+each.
+
 ### The 8 properties (Table 8)
 
 | Property | Type | Locality | Ground Truth | Eval |
@@ -169,16 +203,53 @@ already Erdos-Renyi's defining trait):**
   integer search over `n`'s valid splits rather than rounding a continuous
   target, since rounding can overshoot the bound for small `n`), density
   `p in [0.2, 0.45]`, rejection-sampled for `is_planar() == False`.
-- **`gen_nonbipartite_planar`** (Q3, `random_planar`'s only quadrant) —
-  Delaunay triangulation of random points (always planar — any subgraph of
-  a planar graph is planar too), thinned toward a target edge count within
-  the `3n-6` bound (reverting any removal that would disconnect the graph),
-  rejection-sampled for `is_bipartite() == False`.
-- **`gen_nonbipartite_nonplanar`** (Q4) — Erdos-Renyi (expected degree
-  4–7) / Barabasi-Albert (`m in {3,4}`) / Watts-Strogatz (`k in {4,6}`,
-  `p in {0.1,0.3,0.5}`) at densities chosen so the rejection condition
-  (`not bipartite and not planar`) is easy to satisfy, rejection-sampled
-  for both booleans `False`.
+- **`gen_nonbipartite_planar`** (Q3 building block) — Delaunay triangulation
+  of random points (always planar — any subgraph of a planar graph is
+  planar too), thinned toward a target edge count within the `3n-6` bound
+  (reverting any removal that would disconnect the graph), rejection-sampled
+  for `is_bipartite() == False`. `random_planar`'s 20 Q3 slots don't call
+  this directly any more — see `gen_q3_chromatic_exact` below, which
+  rejection-samples on top of it for an exact chromatic number.
+- **`gen_nonbipartite_nonplanar`** (Q4 building block) — Erdos-Renyi
+  (expected degree 4–7) / Barabasi-Albert (`m in {3,4}`) / Watts-Strogatz
+  (`k in {4,6}`, `p in {0.1,0.3,0.5}`) at densities chosen so the rejection
+  condition (`not bipartite and not planar`) is easy to satisfy,
+  rejection-sampled for both booleans `False`. No longer called by
+  `erdos_renyi`/`barabasi_albert`/`watts_strogatz`'s Q4 slots (25/tier) —
+  see `gen_clique_anchor_chromatic` below, which replaced it there to get
+  an exact chromatic number (this function is kept only as documentation
+  of what Q4 originally looked like, and because `gen_q3_chromatic_exact`
+  above still needs its Q3 counterpart).
+
+**Chromatic-number-exact generators**, used to spread `chromatic_number`
+evenly across 3/4/5/6 among the non-bipartite half (see the Design Matrix
+note above) — both verify the target was actually hit via
+`exact_chromatic_number` (Cell 7) and retry on mismatch, rather than
+trusting construction alone:
+
+- **`gen_q3_chromatic_exact(rng, vmin, vmax, target_k)`** — calls
+  `gen_nonbipartite_planar` and rejection-samples on the result's exact
+  chromatic number until it matches `target_k` (3 or 4). Reuses the
+  existing Delaunay generator rather than a fresh construction: Delaunay
+  graphs are already naturally triangle-rich and vary a lot in density, so
+  this gives good triangle-count diversity for free. *Why not a
+  clique-anchor construction here too:* tested and rejected — attaching
+  even a few "bonus" cliques (see below) to a large clique-anchor graph
+  reliably breaks planarity once `n` gets into the medium/hard range (the
+  added structure creates a K5/K3,3 minor), so it can't be used wherever
+  planarity must hold.
+- **`gen_clique_anchor_chromatic(rng, vmin, vmax, k)`** — a `K_k` anchor
+  clique (forcing the clique number, hence chromatic number, to at least
+  `k`) with the remaining nodes attached as a random tree, plus a random
+  number of **disjoint** bonus `k`-cliques grafted onto separate tree nodes
+  to vary triangle count without changing the chromatic number (gluing
+  same-size cliques by bridges is a classical "block graph" construction
+  with chromatic number equal to the largest block — verified after
+  construction here, not just assumed, since blocks sharing more than one
+  node by chance can break this). `K5`/`K6` anchors are automatically
+  non-planar (Kuratowski), so this satisfies Q4's not-planar requirement
+  for free — used for `erdos_renyi`/`barabasi_albert`/`watts_strogatz`'s
+  Q4 slots, targeting `k=5` and `k=6`.
 
 **`erdos_renyi`'s own Q3 flavor** — `gen_er_nonbip_planar`: a
 **uniformly-random-attachment tree** (each new node attaches to a uniformly
@@ -389,6 +460,20 @@ From `graph_exp1_summary.json`:
   `boolean_balance_by_tier`, counting every graph regardless of family).
 - **counts_by_tier_family = 20/20/20/20/20** — all 5 families exactly equal,
   in every tier.
+- **chromatic_number_uncertified_count = 0** — every graph's chromatic
+  number closed via the clique certificate or the time-boxed backtracking
+  search, even with the added chromatic-exact construction work (median
+  time per generated graph well under a second; 300 graphs generate in
+  ~5s total).
+- **chromatic_number = {2: 50, 3: 12, 4: 13, 5: 12, 6: 13}, identical in
+  every tier** — exactly the target split: 2 locked to the bipartite half,
+  3/4/5/6 spread evenly across the non-bipartite half. Before this fix,
+  chromatic_number among non-bipartite graphs was concentrated on 3/4
+  (~20/~25 each) with 5 rare (3-6/tier) and 6 never observed at all.
+- **triangle_count spread is now wide and tier-scaled** instead of
+  clustering near 0: among non-bipartite graphs, min/median/max is
+  0/13/23 (simple), 0/25/123 (medium), 0/60/266 (hard) — verified directly
+  in the notebook output, not just inferred from the mean.
 - **Cross-family overlap is real and exactly as planned** —
   `quadrant_by_family_by_tier` for the simple tier:
 
@@ -403,22 +488,18 @@ From `graph_exp1_summary.json`:
   Identical in medium and hard tiers. `erdos_renyi`/`barabasi_albert`/
   `watts_strogatz` each genuinely span all 4 quadrants; `random_bipartite`/
   `random_planar` stay confined to the quadrants consistent with their name.
-- **chromatic_number_uncertified_count = 0** — every graph's chromatic
-  number closed via the clique certificate or the time-boxed backtracking
-  search.
 - **Scale separation across tiers** is large and intentional:
 
   | Tier | mean nodes | mean edges | mean triangles | mean edge-list length |
   |------|-----------|-----------|-----------------|------------------------|
-  | simple | 11.83 | 20.10 | 6.81 | 108 chars |
-  | medium | 28.39 | 54.00 | 14.08 | 306 chars |
-  | hard   | 59.35 | 135.53 | 22.44 | 788 chars |
+  | simple | 11.44 | 17.51 | 6.13 | 95 chars |
+  | medium | 29.31 | 52.66 | 15.52 | 300 chars |
+  | hard   | 61.26 | 128.27 | 33.16 | 747 chars |
 
-  `chromatic_number` stays compact across tiers (mean 2.85 → 2.87 → 2.83,
-  bounded low because half the dataset is bipartite — chromatic number ≤ 2
-  whenever there's at least one edge — and a further chunk is planar
-  (chromatic number ≤ 4, four-color theorem).
-- `avg_clustering` decreases with tier (0.19 → 0.15 → 0.12 mean) — larger,
+  `chromatic_number`'s mean is now identical across tiers (3.26 in all
+  three) by construction, since the 2/3/4/5/6 split is the same in every
+  tier — a direct consequence of the balance above, not a coincidence.
+- `avg_clustering` decreases with tier (0.18 → 0.15 → 0.13 mean) — larger,
   sparser graphs have proportionally fewer closed triangles per node.
 
 ## 5. How Phase 2 consumes this

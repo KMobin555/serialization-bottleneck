@@ -180,6 +180,34 @@ case).
   families cover that quadrant by largest remainder, giving the subsample
   the same exact 50/50 balance as the full dataset (verified: 10 True / 10
   False per property per tier, 60/300 total, same as before this fix).
+- **`chromatic_number` and `triangle_count` had the same tier-inconsistency
+  problem, for a different reason: they're mathematically *derived* from
+  `is_bipartite`, not independent of it.** Every bipartite graph has
+  `triangle_count = 0` and `chromatic_number = 2` — so once `is_bipartite`
+  was locked to exactly 50/tier, those two values were locked to at least
+  50/tier too, and the *non-bipartite* half's chromatic_number
+  (concentrated on 3/4, rarely 5, never 6) and triangle_count (narrow,
+  clustered low) still gave several models a canned-default strategy that
+  paid off more on harder tiers: several models converged to guessing
+  chromatic_number=4 (or, for V4-Flash's triangle_count, defaulting to 0)
+  far more often on medium/hard graphs than simple ones, and since those
+  values represented a large chunk of the ground truth, high-volume
+  blind guessing swept up more raw hits there than a more hesitant, actually
+  -reasoned guess did on simple graphs — see
+  `../phase1_dataset_graph/README.md` §1 for the full mechanism. Phase 1
+  now spreads chromatic_number evenly across 3/4/5/6 (~12–13 each) among
+  the non-bipartite half via two new chromatic-number-exact generators, and
+  triangle_count now spans a wide, tier-scaled range instead of clustering
+  low. Result: chromatic_number's tier pattern is now sensibly monotonic
+  for every model checked (e.g. Qwen3-32B was 31%→24%→31%, now
+  22%→17%→15%); Qwen3-32B and Llama4-Scout's triangle_count also flipped
+  to the expected decreasing-with-difficulty direction. V4-Flash's
+  triangle_count accuracy still *rises* with tier (30%→42%→51%) — verified
+  this is now purely the mathematically-unavoidable part: its "guess 0"
+  rate climbs from 31 to 86 (of 100) as graphs get harder, nearly
+  saturating the tier's locked ~54-graph triangle-free (bipartite) pool by
+  the hard tier (51/54 captured) — this can't be balanced away without
+  reopening the `is_bipartite` 50/50 split itself.
 
 ---
 
