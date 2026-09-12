@@ -7,47 +7,51 @@ Per serialization_experiment_1.pdf, Section 2 (inference parameters):
      shape/type category so that the subsample preserves the distributional
      balance of the full dataset."
 
-Same procedure as ../../phase2_model_results/06_v4pro_nonthinking/build_subsample.py
-(Geometry domain), adapted to this domain's (tier, family) strata instead of
-(tier, shape_type) -- with one addition: `random_bipartite` and
-`random_planar` are also stratified by their own named boolean property
-(`is_bipartite` / `is_planar`), since each is generated as an exact 50/50
-split on that property (see ../../phase1_dataset_graph/README.md S1) and a
-plain (tier, family) draw can land on a badly skewed true/false mix within
-that quota purely by chance -- observed directly: an earlier subsample drew
-4/4 True for medium/random_bipartite and 4/4 True for hard/random_planar,
-0 False either time, which is why V4-Pro's per-tier is_bipartite/is_planar
-accuracy looked erratic against the other 5 models (each queried on the
-full, genuinely balanced 300-graph dataset, not a small unstratified draw
-from it).
+Adapted to this domain's quadrant structure (see
+../../phase1_dataset_graph/README.md S1/S2): the 300-graph dataset is built
+so that all 5 Table-7 families are exactly 20/tier, and every (is_bipartite,
+is_planar) quadrant is exactly 25/tier, spread across whichever families
+cover it -- `random_bipartite` (Q1+Q2 only), `random_planar` (Q3 only), and
+`erdos_renyi`/`barabasi_albert`/`watts_strogatz` (all 4 quadrants each). A
+subsample must preserve that quadrant structure, or the same imbalance
+reappears one level down: an earlier, quadrant-unaware subsample drew 4/4
+True for one tier's random_bipartite quota and 4/4 True for another's
+random_planar quota, 0 False either time -- exactly why V4-Pro's per-tier
+is_bipartite/is_planar accuracy looked erratic against the other 5 models
+(each queried on the full, genuinely balanced 300-graph dataset).
 
 Algorithm
 ---------
-1. Group the dataset by (tier, family) -- 15 groups -- then split
-   `random_bipartite` and `random_planar`'s groups further into a true/false
-   sub-group each (17 groups total: 3 unsplit families + 2 split into 2).
-   Per-tier family sizes are 20/19/19/22/20 (erdos_renyi/barabasi_albert/
-   watts_strogatz/random_bipartite/random_planar), matching
-   graph_exp1_summary.json; random_bipartite's 22 is exactly 11 True + 11
-   False, random_planar's 20 is exactly 10 True + 10 False, in every tier.
-2. Per tier, allocate the tier's quota across the 5 *families* by **largest
-   remainder** at 20%, exactly as before this fix: exact quotas
-   4.0/3.8/3.8/4.4/4.0, floors 4/3/3/4/4=18, 2 leftover slots go to the
-   largest fractional parts (barabasi_albert .8, then watts_strogatz .8) ->
-   4/4/4/4/4, exactly 20 per tier, 60 total. This level is unchanged --
-   same family-level counts as before the fix.
-3. For `random_bipartite` and `random_planar` only, split that family's
-   quota (4, in the committed run) in half between its True and False
-   sub-groups (`quota // 2` each way, remainder -- if the quota is ever odd
-   -- going to False for a deterministic tie-break). Both sub-groups are
-   always the same size per tier (11/11 or 10/10), so this is a genuine
-   half split, not a weighted approximation.
+1. Group the dataset by (tier, family, quadrant) -- quadrant is derived
+   from (is_bipartite, is_planar) directly, not read off a label: Q1 =
+   bipartite AND planar, Q2 = bipartite AND NOT planar, Q3 = NOT bipartite
+   AND planar, Q4 = NOT bipartite AND NOT planar.
+2. Per tier, per quadrant: take the **floor** of `quadrant_total * rate`
+   (quadrant_total is always 25, so at the default 20% rate that's
+   `floor(5.0) = 5`), then split that 5-slot budget across whichever
+   families cover the quadrant by **largest remainder**, weighted by each
+   family's own share of the quadrant. This is a quadrant-level floor, not
+   a per-family-cell floor -- flooring each small family/quadrant cell
+   independently (e.g. `erdos_renyi`'s Q3 slice, only 2/tier) rounds several
+   cells to 0 unevenly and silently breaks the boolean balance; flooring the
+   quadrant *total* first and distributing downward preserves it exactly.
+3. Because all 4 quadrants get the same 5-slot budget, the subsample is
+   exactly 50/50 on both booleans in every tier by construction:
+   `is_bipartite` true = Q1+Q2 = 5+5 = 10, false = Q3+Q4 = 5+5 = 10;
+   `is_planar` true = Q1+Q3 = 5+5 = 10, false = Q2+Q4 = 5+5 = 10. No
+   further balancing step is needed -- the quadrant symmetry *is* the
+   balance. (Committed allocation: Q1 -> random_bipartite 2, erdos_renyi 1,
+   barabasi_albert 1, watts_strogatz 1; Q2 -> same as Q1; Q3 ->
+   random_planar 4, erdos_renyi 1, barabasi_albert 0, watts_strogatz 0;
+   Q4 -> erdos_renyi 2, barabasi_albert 1, watts_strogatz 2. Family totals:
+   random_bipartite 4, random_planar 4, erdos_renyi 5, barabasi_albert 3,
+   watts_strogatz 4 -- 20/tier, 60 total.)
 4. Draw each stratum's slots with `random.Random(seed).sample()`, iterating
-   tiers in order (simple, medium, hard) and strata in the dataset's own
-   generation order (erdos_renyi, barabasi_albert, watts_strogatz,
-   random_bipartite True, random_bipartite False, random_planar True,
-   random_planar False). Order matters: it fixes the RNG's consumption
-   sequence, which is what makes the result reproducible.
+   tiers in order (simple, medium, hard), quadrants in order (Q1, Q2, Q3,
+   Q4), and families within each quadrant in the dataset's own family order
+   (random_bipartite, random_planar, erdos_renyi, barabasi_albert,
+   watts_strogatz). Order matters: it fixes the RNG's consumption sequence,
+   which is what makes the result reproducible.
 5. Validate, then write the ids sorted.
 
 Usage
@@ -72,23 +76,11 @@ HERE = Path(__file__).resolve().parent
 DEFAULT_DATASET = HERE.parent.parent / "phase1_dataset_graph" / "graph_exp1_dataset.json"
 DEFAULT_OUTPUT = HERE / "subsample_v4pro_nonthinking.json"
 
-# Iteration order is part of the algorithm, not a display choice -- changing it
-# changes which graphs are drawn for a given seed. Matches the Phase-1 notebook's
-# FAMILIES order.
 TIERS = ("simple", "medium", "hard")
-FAMILIES = ("erdos_renyi", "barabasi_albert", "watts_strogatz", "random_bipartite", "random_planar")
-
-# Families that must also be stratified by their own named boolean property,
-# and which property that is. See module docstring point 1.
-SPLIT_FAMILIES = {"random_bipartite": "is_bipartite", "random_planar": "is_planar"}
-
-# Every (family, sub) stratum, in draw order: sub is None for a family with
-# no internal boolean split, else True then False.
-STRATA: tuple[tuple[str, bool | None], ...] = tuple(
-    (f, sub)
-    for f in FAMILIES
-    for sub in ((True, False) if f in SPLIT_FAMILIES else (None,))
-)
+QUADRANTS = ("Q1", "Q2", "Q3", "Q4")
+# Family order matters for RNG draw order and largest-remainder tie-breaks --
+# matches the Phase-1 notebook's FAMILY_QUADRANT_PLAN order.
+FAMILIES = ("random_bipartite", "random_planar", "erdos_renyi", "barabasi_albert", "watts_strogatz")
 
 N_PROPERTIES = 8        # queries per graph, used for the n_queries field
 DEFAULT_RATE = 0.2
@@ -99,7 +91,7 @@ PURPOSE = "DeepSeek-V4-Pro non-thinking companion run, 20% stratified subsample 
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(
-        description="Build the 20% tier/family-stratified subsample of the Phase-1 graph dataset.")
+        description="Build the 20% quadrant-stratified subsample of the Phase-1 graph dataset.")
     p.add_argument("--dataset", type=Path, default=DEFAULT_DATASET,
                    help="Phase-1 dataset JSON (default: ../../phase1_dataset_graph/...).")
     p.add_argument("--output", type=Path, default=DEFAULT_OUTPUT,
@@ -129,72 +121,54 @@ def load_dataset(path: Path) -> list[dict[str, Any]]:
         if oid in seen:
             raise ValueError(f"duplicate object_id: {oid}")
         seen.add(oid)
-        for key in ("tier", "family"):
+        for key in ("tier", "family", "properties"):
             if key not in row:
                 raise ValueError(f"{oid} missing {key}")
     return data
 
 
-def stratum_key(row: dict[str, Any]) -> tuple[str, str, bool | None]:
-    fam = row["family"]
-    if fam in SPLIT_FAMILIES:
-        return (row["tier"], fam, bool(row["properties"][SPLIT_FAMILIES[fam]]))
-    return (row["tier"], fam, None)
+def quadrant_of(row: dict[str, Any]) -> str:
+    bip = row["properties"]["is_bipartite"]
+    plan = row["properties"]["is_planar"]
+    if bip and plan:
+        return "Q1"
+    if bip and not plan:
+        return "Q2"
+    if not bip and plan:
+        return "Q3"
+    return "Q4"
 
 
-def group_by_stratum(dataset: list[dict[str, Any]]) -> dict[tuple[str, str, bool | None], list[str]]:
-    """Bucket object_ids by (tier, family[, bool]), preserving dataset order."""
-    groups: dict[tuple[str, str, bool | None], list[str]] = {}
+def group_by_stratum(dataset: list[dict[str, Any]]) -> dict[tuple[str, str, str], list[str]]:
+    """Bucket object_ids by (tier, family, quadrant), preserving dataset order."""
+    groups: dict[tuple[str, str, str], list[str]] = {}
     for row in dataset:
-        groups.setdefault(stratum_key(row), []).append(row["object_id"])
-
-    expected = {(t, f, sub) for t in TIERS for f, sub in STRATA}
-    missing = [k for k in expected if k not in groups]
-    if missing:
-        raise ValueError(f"dataset has no graphs for strata: {missing}")
-    unexpected = set(groups) - expected
-    if unexpected:
-        raise ValueError(f"dataset has unexpected strata: {sorted(unexpected)}")
+        groups.setdefault((row["tier"], row["family"], quadrant_of(row)), []).append(row["object_id"])
     return groups
 
 
-def allocate(groups: dict[tuple[str, str, bool | None], list[str]], rate: float
-             ) -> dict[tuple[str, str, bool | None], int]:
-    """Two-level largest-remainder allocation (see module docstring).
-
-    Level 1 -- per (tier, family), unchanged from before this fix: largest
-    remainder at `rate` over the 5 families' total sizes.
-    Level 2 -- for the 2 split families only, that family's quota is halved
-    between its True/False sub-strata (`quota // 2` each, odd remainder to
-    False), since both sub-strata are always the same size per tier.
-    """
-    quota: dict[tuple[str, str, bool | None], int] = {}
+def allocate(groups: dict[tuple[str, str, str], list[str]], rate: float
+             ) -> dict[tuple[str, str, str], int]:
+    """Floor each quadrant's total share, split across its families by
+    largest remainder (see module docstring)."""
+    quota: dict[tuple[str, str, str], int] = {}
     for tier in TIERS:
-        family_size = {
-            f: sum(len(groups[(tier, f, sub)]) for sub in ((True, False) if f in SPLIT_FAMILIES else (None,)))
-            for f in FAMILIES
-        }
-        exact = {f: family_size[f] * rate for f in FAMILIES}
-        base = {f: int(exact[f]) for f in FAMILIES}
-        tier_total = round(sum(exact.values()))
-        leftover = tier_total - sum(base.values())
-        ranked = sorted(FAMILIES, key=lambda f: (-(exact[f] - base[f]), FAMILIES.index(f)))
-        for family in ranked[:leftover]:
-            base[family] += 1
-
-        for family in FAMILIES:
-            fam_quota = base[family]
-            if family not in SPLIT_FAMILIES:
-                if fam_quota > len(groups[(tier, family, None)]):
-                    raise ValueError(f"quota {fam_quota} exceeds {tier}/{family} group size")
-                quota[(tier, family, None)] = fam_quota
-                continue
-            q_true = fam_quota // 2
-            q_false = fam_quota - q_true
-            for sub, q in ((True, q_true), (False, q_false)):
-                if q > len(groups[(tier, family, sub)]):
-                    raise ValueError(f"quota {q} exceeds {tier}/{family}/{sub} group size")
-                quota[(tier, family, sub)] = q
+        for quad in QUADRANTS:
+            fams_in_quad = [f for f in FAMILIES if (tier, f, quad) in groups]
+            if not fams_in_quad:
+                raise ValueError(f"no families cover {tier}/{quad}")
+            quad_total = sum(len(groups[(tier, f, quad)]) for f in fams_in_quad)
+            target = int(quad_total * rate)  # floor, per module docstring
+            exact = {f: len(groups[(tier, f, quad)]) * rate for f in fams_in_quad}
+            base = {f: int(exact[f]) for f in fams_in_quad}
+            leftover = target - sum(base.values())
+            ranked = sorted(fams_in_quad, key=lambda f: (-(exact[f] - base[f]), FAMILIES.index(f)))
+            for f in ranked[:leftover]:
+                base[f] += 1
+            for f in fams_in_quad:
+                if base[f] > len(groups[(tier, f, quad)]):
+                    raise ValueError(f"quota {base[f]} exceeds {tier}/{f}/{quad} group size")
+                quota[(tier, f, quad)] = base[f]
     return quota
 
 
@@ -203,8 +177,12 @@ def draw(groups, quota, seed: int) -> list[str]:
     rng = random.Random(seed)
     picked: list[str] = []
     for tier in TIERS:
-        for family, sub in STRATA:
-            picked.extend(rng.sample(groups[(tier, family, sub)], quota[(tier, family, sub)]))
+        for quad in QUADRANTS:
+            for f in FAMILIES:
+                key = (tier, f, quad)
+                if key not in quota:
+                    continue
+                picked.extend(rng.sample(groups[key], quota[key]))
     return sorted(picked)
 
 
@@ -217,28 +195,39 @@ def validate(ids, dataset, quota) -> None:
     if unknown:
         raise ValueError(f"ids not in dataset: {unknown[:5]}")
 
-    actual: dict[tuple[str, str, bool | None], int] = {}
+    actual: dict[tuple[str, str, str], int] = {}
     for i in ids:
         row = by_id[i]
-        key = stratum_key(row)
+        key = (row["tier"], row["family"], quadrant_of(row))
         actual[key] = actual.get(key, 0) + 1
-    if actual != quota:
-        raise ValueError(f"composition mismatch: got {actual}, expected {quota}")
+    expected = {k: v for k, v in quota.items() if v > 0}  # zero-quota strata draw nothing
+    if actual != expected:
+        raise ValueError(f"composition mismatch: got {actual}, expected {expected}")
 
-
-def _label(family: str, sub: bool | None) -> str:
-    if sub is None:
-        return family
-    return f"{family}({'T' if sub else 'F'})"
+    # Direct check that the subsample is genuinely 50/50 on both booleans,
+    # in every tier -- the whole point of this rewrite.
+    for tier in TIERS:
+        rows = [by_id[i] for i in ids if by_id[i]["tier"] == tier]
+        n_bip = sum(1 for r in rows if r["properties"]["is_bipartite"])
+        n_plan = sum(1 for r in rows if r["properties"]["is_planar"])
+        half = len(rows) // 2
+        if n_bip != half or (len(rows) - n_bip) != half:
+            raise ValueError(f"{tier}: is_bipartite not balanced ({n_bip} true / {len(rows) - n_bip} false)")
+        if n_plan != half or (len(rows) - n_plan) != half:
+            raise ValueError(f"{tier}: is_planar not balanced ({n_plan} true / {len(rows) - n_plan} false)")
 
 
 def print_plan(groups, quota, rate) -> None:
-    print(f"Stratified allocation at rate {rate:g}:\n")
-    print(f"  {'tier':8s} " + " ".join(f"{_label(f, sub):>15s}" for f, sub in STRATA) + f" {'total':>8s}")
+    print(f"Stratified allocation at rate {rate:g} (floor per quadrant, split by largest remainder):\n")
     for tier in TIERS:
-        cells = " ".join(f"{quota[(tier, f, sub)]:>3d}/{len(groups[(tier, f, sub)]):<11d}" for f, sub in STRATA)
-        total = sum(quota[(tier, f, sub)] for f, sub in STRATA)
-        print(f"  {tier:8s} {cells} {total:>8d}")
+        print(f"  {tier}:")
+        for quad in QUADRANTS:
+            cells = ", ".join(f"{f}={quota[(tier, f, quad)]}/{len(groups[(tier, f, quad)])}"
+                               for f in FAMILIES if (tier, f, quad) in quota)
+            total = sum(v for (t, f, q), v in quota.items() if t == tier and q == quad)
+            print(f"    {quad} (target {total}): {cells}")
+        fam_totals = {f: sum(v for (t, fam, q), v in quota.items() if t == tier and fam == f) for f in FAMILIES}
+        print(f"    family totals: {fam_totals}")
     grand = sum(quota.values())
     pool = sum(len(v) for v in groups.values())
     print(f"\n  selected {grand} of {pool} graphs ({100 * grand / pool:.1f}%)")

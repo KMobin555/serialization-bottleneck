@@ -139,46 +139,47 @@ case).
 - **This is the second of three domains.** The Section 9 rule needs at least
   2 of 3 domains, so the final go/no-go is deferred until this notebook has
   real results *and* the tabular domain is evaluated.
-- **`is_planar`'s accuracy-rises-with-tier artifact is now fully fixed.**
-  An earlier build closed this for `is_bipartite` only (Phase 1's
-  `random_bipartite`/`random_planar` families each have an exact internal
-  50/50 split on their own named boolean property, see
-  `../phase1_dataset_graph/README.md` §1) but left `is_planar`'s *overall*
-  true-rate swinging by tier (42% simple / 13% medium / 10% hard), because
-  small sparse graphs from the *other* 4 families were incidentally planar
-  far more often than large ones — an effect living entirely outside
-  `random_planar`, so balancing only that family couldn't correct it.
-  Phase 1 now corrects every such incidental hit after generation
-  (`try_force_nonplanar` / `try_force_nonbipartite_preserve_planar`, §1/§2
-  there), so `is_bipartite=True` and `is_planar=True` come *only* from
-  `random_bipartite`/`random_planar` respectively, in every tier, with
-  certainty. Both properties' overall true-rate is now exactly flat (11.0%,
-  10.0%) across all 3 tiers, and the artifact is gone in the data that
-  mattered most: Qwen3-32B and Llama4-Scout's `is_planar` accuracy is now
-  **90.0% / 90.0% / 90.0%** across simple/medium/hard — flat, matching the
-  majority-class baseline exactly, instead of the previous 68%→87%→90%
-  rise. (Gemini and GPT-4.1-mini still show some tier-to-tier accuracy
-  variation on `is_planar`, but that's now genuine model behavior — they
-  actually vary their True/False predictions by tier rather than defaulting
-  to one answer — not a base-rate artifact.)
-- **V4-Pro (non-thinking)'s subsample had the same artifact, one layer
-  down.** The full dataset being exactly 50/50 on `is_bipartite`/`is_planar`
-  within their named families doesn't guarantee a random *20% draw* from it
-  preserves that balance — `build_subsample.py`'s original stratification
-  was only by `(tier, family)`, so a 4-of-22 or 4-of-20 draw from
-  `random_bipartite`/`random_planar` could land on (and did: observed 4/4
-  True, 0 False for `medium/random_bipartite` and `hard/random_planar`) a
-  badly skewed true/false mix purely by chance, independent of how balanced
-  the source family was. Fixed by adding a second stratification level:
-  each of those two families' quota is now split in half between its own
-  named boolean property before drawing (`SPLIT_FAMILIES` in
-  `../phase2_model_results_graph/06_v4pro_nonthinking/build_subsample.py`),
-  so the subsample is exactly 2 True + 2 False per property per tier — same
-  overall family-level counts and total (60/300) as before, just internally
-  balanced now. V4-Pro's remaining per-tier accuracy variation (e.g. its own
-  True-prediction rate drops from 70% in simple to 0–5% in medium/hard) is
-  therefore now attributable to the model's actual behavior, not to which
-  20 graphs happened to get drawn.
+- **`is_bipartite`/`is_planar`'s accuracy-rises-with-tier artifact went
+  through 3 fix iterations before landing on the current design** (see
+  `../phase1_dataset_graph/README.md` §1 for the full history):
+  1. Balance only *within* `random_bipartite`/`random_planar` (each 50/50
+     internally). Left `is_planar`'s *overall* true-rate swinging by tier
+     (42%/13%/10%), since the other 4 families incidentally produced planar
+     graphs far more often at small `n` than large `n`.
+  2. Force every incidental leak back to `False` after generation, keeping
+     `random_bipartite`/`random_planar` as the sole source of `True` (family
+     sizes 50/25/9/8/8). Fixed tier-flatness but left family sizes far from
+     the PDF's balance target, and structurally forbade any cross-family
+     correlation.
+  3. **Current: spread `True` across all 5 families**, each exactly 20/tier,
+     each covering whichever (`is_bipartite`, `is_planar`) quadrants make
+     sense for it — `random_bipartite`/`random_planar` stay true to their
+     names, `erdos_renyi`/`barabasi_albert`/`watts_strogatz` each
+     authentically span all 4 quadrants in their own structural flavor.
+     Both properties are exactly 50/50 in every tier, family sizes are
+     exactly equal, and genuine cross-family correlation exists (some
+     `barabasi_albert` graphs really are bipartite, some `watts_strogatz`
+     graphs really are planar).
+
+  The result: Qwen3-32B's and Llama4-Scout's `is_bipartite` accuracy is now
+  **exactly 50.0% in every tier** (simple/medium/hard) — the pure
+  majority-class baseline at a true 50/50 ground-truth split, with zero
+  tier-to-tier drift. `is_planar` shows a small remaining bump on the
+  simple tier for several models (e.g. Qwen3-32B 64%→50%→50%,
+  GPT-4.1-mini 76%→60%→51%) — with ground truth verified exactly flat
+  50/50 in every tier, this is now attributable to the models' own
+  answering behavior (e.g. attempting more non-default answers on smaller
+  graphs), not to the dataset.
+- **V4-Pro (non-thinking)'s subsample needed the same fix, one layer down.**
+  A dataset being exactly 50/50 overall doesn't guarantee a random *20%
+  draw* from it preserves that balance — an early quadrant-unaware
+  subsample drew 4/4 True for one tier's `random_bipartite` quota and 4/4
+  True for another's `random_planar` quota, 0 False either time.
+  `build_subsample.py` now floors each (`is_bipartite`, `is_planar`)
+  quadrant's total share (25 → 5 per tier) and splits it across whichever
+  families cover that quadrant by largest remainder, giving the subsample
+  the same exact 50/50 balance as the full dataset (verified: 10 True / 10
+  False per property per tier, 60/300 total, same as before this fix).
 
 ---
 
